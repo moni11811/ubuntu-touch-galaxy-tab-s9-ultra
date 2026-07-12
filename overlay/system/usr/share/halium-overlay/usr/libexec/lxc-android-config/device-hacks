@@ -89,6 +89,11 @@ done
 setprop debug.stagefright.c2inputsurface 1
 setprop ubuntu.widi.supported 1
 
+# the 32-bit omx@1.0 service cannot exec on this 64-bit container, so its
+# IOmxStore never registers and stagefright's recorder blocks on it forever.
+# the manifest overlay drops the omx hal; force codec2 for the encoder too
+setprop debug.stagefright.ccodec 4
+
 # the HAL reports phone-style sensor orientations on a landscape-native panel
 setprop aal.camera.orientations.0 0
 setprop aal.camera.orientations.1 0
