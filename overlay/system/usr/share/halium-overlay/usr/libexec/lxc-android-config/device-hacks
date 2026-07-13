@@ -72,19 +72,6 @@ esac
 
 while [ "$(getprop vendor.service.nvram_init)" != "Ready" ]; do sleep 0.2; done
 
-# repowerd (ordered After us) polls upower once at startup; a 0.0% first
-# sample reads as critical battery and powers the device off in a loop
-i=0
-while [ $i -lt 45 ]; do
-	p=$(busctl --system get-property org.freedesktop.UPower \
-		/org/freedesktop/UPower/devices/battery_battery \
-		org.freedesktop.UPower.Device Percentage 2>/dev/null | cut -d" " -f2)
-	case "${p%%.*}" in
-	""|0) sleep 1; i=$((i+1));;
-	*) break;;
-	esac
-done
-
 # enables wireless display (aethercast) support
 setprop debug.stagefright.c2inputsurface 1
 setprop ubuntu.widi.supported 1
