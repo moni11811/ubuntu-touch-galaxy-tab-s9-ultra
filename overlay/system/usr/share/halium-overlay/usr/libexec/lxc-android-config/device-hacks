@@ -1,5 +1,17 @@
 #!/bin/sh
 
+# the container module loader stops partway (a failing module aborts the
+# sequence), so many vendor modules never load - the fuelgauge among them,
+# and without it sec_battery reports 0% and repowerd powers the device off.
+# replay modules.load so everything that can load, does.
+(
+	for pass in 1 2 3; do
+		while read ko; do
+			[ -n "$ko" ] && insmod "/vendor/lib/modules/$ko" 2>/dev/null
+		done < /vendor/lib/modules/modules.load
+	done
+) &
+
 gst_src=/usr/lib/aarch64-linux-gnu/gstreamer-1.0
 gst_dst=/home/phablet/.local/lib/gstreamer-1.0
 rm -rf "$gst_dst" && mkdir -p "$gst_dst"
