@@ -16,6 +16,7 @@ KERNEL_DIR="$1"
 
 GOODIX_REF_REPO="https://github.com/samsung-gts9u/android_kernel_samsung_sm8550.git"
 GOODIX_REF_COMMIT="a82404d967be6319df038f5091fb35aeae83d6c6"
+GOODIX_REF_LINEAGE_BRANCH="lineage-23.2"
 GOODIX_SRC="${2:-}"
 
 if [ -z "$GOODIX_SRC" ]; then
@@ -55,5 +56,27 @@ CONFIG_TOUCHSCREEN_GOODIX_BRL=m
 # as reported by the SM-X910 bootloader).
 CONFIG_CMDLINE="console=ttynull nokaslr stack_depot_disable=on kasan.stacktrace=off kvm-arm.mode=protected cgroup_disable=pressure video=vfb:640x400,bpp=32,memsize=3072000 printk.devkmsg=on firmware_class.path=/vendor/firmware_mnt/image,/android/vendor/firmware,/android/odm/firmware bootconfig loop.max_part=7 msm_drm.dsi_display0=GTS9U_ANA38407_AMSA46AS02: msm_drm.lcd_id=800004 sec_common_fn.lcd_id=800004 net.ifnames=0"
 EOF
+
+# 4. dataipa probe header for the kiwi_v2 WLAN profile.
+# kiwi_v2 enables CONFIG_IPA_OPT_WIFI_DP; qcacld's qdf_status.h then includes
+# dataipa's ipa_test_module.h to probe for IPA_WDI_OPT_DPATH and cleanly
+# disables IPA offload when the macro is absent. Samsung's own SM-X910
+# module tree ships this header WITHOUT the macro, so vendoring the real
+# Samsung header reproduces the stock source semantics. The dataipa modules
+# themselves stay stock in vendor_dlkm.
+VENDOR_ROOT="$(dirname "$KERNEL_DIR")/vendor/qcom/opensource"
+IPA_HDR_URL="https://raw.githubusercontent.com/samsung-gts9u/android_kernel_samsung_sm8550-modules/$GOODIX_REF_LINEAGE_BRANCH/qcom/opensource/dataipa/drivers/platform/msm/ipa/ipa_test_module/ipa_test_module.h"
+if [ -d "$VENDOR_ROOT/wlan" ]; then
+    for base in "$VENDOR_ROOT/wlan/dataipa" "$VENDOR_ROOT/dataipa"; do
+        d="$base/drivers/platform/msm/ipa/ipa_test_module"
+        if [ ! -f "$d/ipa_test_module.h" ]; then
+            mkdir -p "$d"
+            curl -fsSL "$IPA_HDR_URL" -o "$d/ipa_test_module.h"
+        fi
+    done
+    grep -q "IPA_WDI_OPT_DPATH" "$VENDOR_ROOT/wlan/dataipa/drivers/platform/msm/ipa/ipa_test_module/ipa_test_module.h" \
+        && echo "note: dataipa header defines IPA_WDI_OPT_DPATH (IPA offload stays on)" \
+        || echo "dataipa probe header vendored (IPA offload will be disabled by qdf_status.h, matching Samsung source)"
+fi
 
 echo "kernel tree prepared for gts9uwifi"
