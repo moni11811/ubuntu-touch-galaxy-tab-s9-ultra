@@ -1,4 +1,9 @@
 #!/sbin/sh
+# Ubuntu Touch installer for Samsung Galaxy Tab S9 Ultra Wi-Fi (SM-X910, gts9uwifi) ONLY.
+# Writes exactly: boot, init_boot, vendor_boot, vbmeta, super. Nothing else.
+# Never touches: recovery, dtbo, userdata, metadata, efs/sec_efs/persist/modemst*,
+# xbl*/abl/aop/tz/hyp/devcfg/keymaster/uefisecapp/qupfw/storsec, PIT or GPT.
+# No wipes, no formats, no reboot.
 
 OUTFD=$2
 ZIPFILE="$3"
@@ -10,17 +15,60 @@ ui_print() {
 
 abort() {
     ui_print "ERROR: $1"
+    ui_print "Installation aborted."
     exit 1
 }
 
 ui_print "---------------------------------------"
-ui_print " Ubuntu Touch for gts9wifi"
+ui_print " Ubuntu Touch 24.04 for SM-X910"
+ui_print " Samsung Galaxy Tab S9 Ultra (gts9uwifi)"
 ui_print "---------------------------------------"
 
-EXPECTED_CODENAME="gts9wifi"
+# --- Device assertions: this package must only ever run on SM-X910 ---
 DEVICE_CODENAME="$(getprop ro.product.device)"
-[ "$DEVICE_CODENAME" = "$EXPECTED_CODENAME" ] || abort "This package is for '$EXPECTED_CODENAME' (detected '$DEVICE_CODENAME')"
+EM_MODEL="$(getprop ro.boot.em.model)"
+BOOTLOADER="$(getprop ro.bootloader)"
 
+ui_print "Detected ro.product.device: $DEVICE_CODENAME"
+ui_print "Detected ro.boot.em.model:  $EM_MODEL"
+ui_print "Detected bootloader:        $BOOTLOADER"
+
+case "$DEVICE_CODENAME" in
+    gts9u|gts9uwifi) ;;
+    *) abort "This package is only for gts9u/gts9uwifi (detected '$DEVICE_CODENAME')" ;;
+esac
+
+# ro.boot.em.model comes from the Samsung bootloader cmdline, not from the
+# recovery build, so it identifies the real hardware.
+if [ -n "$EM_MODEL" ] && [ "$EM_MODEL" != "SM-X910" ]; then
+    abort "This package is only for SM-X910 (detected '$EM_MODEL')"
+fi
+if [ -z "$EM_MODEL" ]; then
+    case "$BOOTLOADER" in
+        X910*) ui_print "em.model empty; bootloader X910* accepted" ;;
+        *) abort "Cannot positively identify SM-X910 (em.model empty, bootloader '$BOOTLOADER')" ;;
+    esac
+fi
+
+# --- Partition presence and size checks ---
+BB=/dev/block/by-name
+for part in boot init_boot vendor_boot vbmeta super; do
+    [ -e "$BB/$part" ] || abort "Missing partition $BB/$part"
+done
+
+blkdev_size() { blockdev --getsize64 "$1" 2>/dev/null || echo 0; }
+
+BOOT_SIZE=$(blkdev_size "$BB/boot")
+INIT_BOOT_SIZE=$(blkdev_size "$BB/init_boot")
+VENDOR_BOOT_SIZE=$(blkdev_size "$BB/vendor_boot")
+SUPER_SIZE=$(blkdev_size "$BB/super")
+
+[ "$BOOT_SIZE" -ge 100663296 ] || abort "boot partition too small ($BOOT_SIZE < 100663296)"
+[ "$INIT_BOOT_SIZE" -ge 8388608 ] || abort "init_boot partition too small ($INIT_BOOT_SIZE)"
+[ "$VENDOR_BOOT_SIZE" -ge 100663296 ] || abort "vendor_boot partition too small ($VENDOR_BOOT_SIZE)"
+[ "$SUPER_SIZE" -eq 11744051200 ] || abort "super size mismatch ($SUPER_SIZE != 11744051200, not SM-X910 layout)"
+
+# --- Tooling ---
 if ! command -v zstd >/dev/null 2>&1; then
     unzip -p "$ZIPFILE" zstd > /tmp/zstd 2>/dev/null
     chmod 755 /tmp/zstd 2>/dev/null
@@ -28,24 +76,38 @@ fi
 ZSTD=$(command -v zstd || echo /tmp/zstd)
 [ -x "$ZSTD" ] || abort "no zstd available"
 
+for f in boot.img init_boot.img vendor_boot.img vbmeta.img super.img.zst; do
+    unzip -l "$ZIPFILE" "$f" >/dev/null 2>&1 || abort "ZIP is missing $f"
+done
+
 SLOT="$(getprop ro.boot.slot_suffix)"
 
+ui_print "Planned writes:"
+ui_print "  boot.img        -> $BB/boot$SLOT"
+ui_print "  init_boot.img   -> $BB/init_boot$SLOT"
+ui_print "  vendor_boot.img -> $BB/vendor_boot$SLOT"
+ui_print "  vbmeta.img      -> $BB/vbmeta$SLOT"
+ui_print "  super.img.zst   -> $BB/super (decompressed)"
+ui_print "No other partition will be written."
+
 ui_print "Flashing boot..."
-unzip -p "$ZIPFILE" boot.img | dd of="/dev/block/by-name/boot$SLOT" bs=4M || abort "failed to flash boot"
+unzip -p "$ZIPFILE" boot.img | dd of="$BB/boot$SLOT" bs=4M || abort "failed to flash boot"
 ui_print "Flashing init_boot..."
-unzip -p "$ZIPFILE" init_boot.img | dd of="/dev/block/by-name/init_boot$SLOT" bs=4M || abort "failed to flash init_boot"
+unzip -p "$ZIPFILE" init_boot.img | dd of="$BB/init_boot$SLOT" bs=4M || abort "failed to flash init_boot"
 ui_print "Flashing vendor_boot..."
-unzip -p "$ZIPFILE" vendor_boot.img | dd of="/dev/block/by-name/vendor_boot$SLOT" bs=4M || abort "failed to flash vendor_boot"
+unzip -p "$ZIPFILE" vendor_boot.img | dd of="$BB/vendor_boot$SLOT" bs=4M || abort "failed to flash vendor_boot"
 ui_print "Flashing vbmeta..."
-unzip -p "$ZIPFILE" vbmeta.img | dd of="/dev/block/by-name/vbmeta$SLOT" bs=4M 2>/dev/null || ui_print "vbmeta flash skipped"
+unzip -p "$ZIPFILE" vbmeta.img | dd of="$BB/vbmeta$SLOT" bs=4M 2>/dev/null || ui_print "vbmeta flash skipped"
 
 ui_print "Writing super (several minutes)..."
-unzip -p "$ZIPFILE" super.img.zst | "$ZSTD" -d --long=27 -c | dd of="/dev/block/by-name/super" bs=16M || abort "failed to write super"
+unzip -p "$ZIPFILE" super.img.zst | "$ZSTD" -d --long=27 -c | dd of="$BB/super" bs=16M || abort "failed to write super"
 
 sync
 
 ui_print "---------------------------------------"
-ui_print " Done. Reboot with: twrp reboot system"
+ui_print " Done. This installer does not reboot."
+ui_print " Save the TWRP log, then reboot"
+ui_print " manually with: twrp reboot system"
 ui_print "---------------------------------------"
 
 exit 0

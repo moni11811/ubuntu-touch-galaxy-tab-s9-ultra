@@ -1,7 +1,8 @@
 #!/bin/bash
 LPMAKE=${LPMAKE:-lpmake}
 command -v ${LPMAKE} >/dev/null || LPMAKE="$(dirname "$0")/prebuilt/lpmake"
-SUPER=${SUPER:-"11643387904"}
+# SM-X910 super partition size (11468800 KiB, verified on device and firmware)
+SUPER=${SUPER:-"11744051200"}
 GROUP=${GROUP:-"ubuntu"}
 PARTS=${PARTS:-"./partitions"}
 OUT=${OUT:-"./out/super.img"}

@@ -2,7 +2,7 @@
 set -xe
 HERE=$(dirname "$(realpath "$0")")/..
 OUT=${OUT:-"$HERE/out"}
-ZIP=$(realpath -m "${ZIP:-"$OUT/ubuntu-touch-gts9wifi-super.zip"}")
+ZIP=$(realpath -m "${ZIP:-"$OUT/ubuntu-touch-gts9uwifi-super.zip"}")
 ZSTD_STATIC=${ZSTD_STATIC:-"$HERE/flashable/prebuilt/zstd"}
 ZSTD_LEVEL=${ZSTD_LEVEL:-19}
 

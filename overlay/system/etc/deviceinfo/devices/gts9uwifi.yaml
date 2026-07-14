@@ -1,6 +1,6 @@
-gts9wifi:
+gts9uwifi:
   Vendor: Samsung
-  PrettyName: Tab S9
+  PrettyName: Tab S9 Ultra
   DeviceType: tablet
   SupportedOrientations:
     - Portrait
