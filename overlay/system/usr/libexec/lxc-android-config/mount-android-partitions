@@ -92,11 +92,15 @@ process_single_fstab_entry() {
     if [ ! -e "$path" ]; then return; fi
 
     echo "mounting $path as $android_mount_point"
-    mount -o remount,rw /
-    ln -sfn "/android/vendor_dlkm" /vendor_dlkm
-    mount -o remount,ro /
-    mount "/userdata/vendor_dlkm.img" "/android/vendor_dlkm" -o loop
-    mount "$path" "$android_mount_point" -o "$(parse_mount_flags "$4")" 
+    if [ "$label" = "vendor_dlkm" ] && [ ! -e /vendor_dlkm ]; then
+        # stock vendor has /vendor/lib/modules -> /vendor_dlkm/lib/modules
+        mount -o remount,rw /
+        ln -sfn "/android/vendor_dlkm" /vendor_dlkm
+        mount -o remount,ro /
+    fi
+    if ! mount "$path" "$android_mount_point" -o "$(parse_mount_flags "$4")"; then
+        log "mount of $path at $android_mount_point FAILED"
+    fi
 }
 
 # First, extract the Android's traditional ramdisk, if shipped in /system.
