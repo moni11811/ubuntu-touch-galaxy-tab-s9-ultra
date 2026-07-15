@@ -1,24 +1,34 @@
 #!/bin/sh
-# usb-moded races the dwc3 UDC during early boot (its first mtp bind hits
-# "No such device" and it silently falls back to charging_only, 18d1:0afe,
-# which enumerates as a dead mass-storage stub on the host). Once the system
-# is settled the UDC is stable, so retry the mode selection.
-sleep 12
+# usb-moded's first mtp activation races boot (its UDC bind lands before the
+# appsync-started umtprd holds the functionfs ep0 -> ENODEV -> silent
+# charging_only fallback, 18d1:0afe, a dead mass-storage stub on the host).
+# Later requests can be dropped with "requested while busy". Once boot has
+# settled, walk the useful modes until one binds.
 g=/sys/kernel/config/usb_gadget/g1
-udc=$(cat "$g"/UDC 2>/dev/null)
-pid=$(cat "$g"/idProduct 2>/dev/null)
-echo "ut-usb-retry: state UDC='$udc' idProduct='$pid'"
-if [ "$pid" = "0x6860" ] && [ -n "$udc" ]; then
-    echo "ut-usb-retry: mtp gadget already up, nothing to do"
-    exit 0
+
+bound_ok() {
+    udc=$(cat "$g"/UDC 2>/dev/null)
+    pid=$(cat "$g"/idProduct 2>/dev/null)
+    echo "ut-usb-retry: UDC='$udc' idProduct='$pid'"
+    [ -n "$udc" ] && [ "$pid" != "0x0afe" ] && [ "$pid" != "0x0AFE" ]
+}
+
+sleep 20
+
+if bound_ok; then
+    echo "ut-usb-retry: gadget already healthy"
+else
+    for mode in mtp_adb developer_mode mtp; do
+        echo "ut-usb-retry: trying mode $mode"
+        echo "" > "$g"/UDC 2>/dev/null
+        usb-moded-util -s "$mode" 2>&1 | head -2
+        sleep 8
+        if bound_ok; then
+            echo "ut-usb-retry: mode $mode bound"
+            break
+        fi
+    done
 fi
-# unbind whatever half-configured gadget is there and let usb-moded redo it
-echo "" > "$g"/UDC 2>/dev/null
-systemctl restart usb-moded
-sleep 4
-command -v usb-moded-util >/dev/null && usb-moded-util -s mtp 2>/dev/null
-sleep 3
-echo "ut-usb-retry: after retry UDC='$(cat "$g"/UDC 2>/dev/null)' idProduct='$(cat "$g"/idProduct 2>/dev/null)'"
 
 # WLAN: Samsung's qcacld defers hdd init until the framework WifiHAL writes
 # the boot_wlan trigger; UT has no Android framework, so mirror the write
@@ -26,7 +36,7 @@ echo "ut-usb-retry: after retry UDC='$(cat "$g"/UDC 2>/dev/null)' idProduct='$(c
 if [ -w /sys/kernel/boot_wlan/boot_wlan ]; then
     echo 1 > /sys/kernel/boot_wlan/boot_wlan
     echo "ut-usb-retry: boot_wlan trigger written"
-    sleep 5
+    sleep 6
     ip link show wlan0 >/dev/null 2>&1 && echo "ut-usb-retry: wlan0 present" || echo "ut-usb-retry: wlan0 still absent"
 else
     echo "ut-usb-retry: no /sys/kernel/boot_wlan node"
