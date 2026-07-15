@@ -19,4 +19,16 @@ sleep 4
 command -v usb-moded-util >/dev/null && usb-moded-util -s mtp 2>/dev/null
 sleep 3
 echo "ut-usb-retry: after retry UDC='$(cat "$g"/UDC 2>/dev/null)' idProduct='$(cat "$g"/idProduct 2>/dev/null)'"
+
+# WLAN: Samsung's qcacld defers hdd init until the framework WifiHAL writes
+# the boot_wlan trigger; UT has no Android framework, so mirror the write
+# here (harmless if the node is absent or the driver already initialized).
+if [ -w /sys/kernel/boot_wlan/boot_wlan ]; then
+    echo 1 > /sys/kernel/boot_wlan/boot_wlan
+    echo "ut-usb-retry: boot_wlan trigger written"
+    sleep 5
+    ip link show wlan0 >/dev/null 2>&1 && echo "ut-usb-retry: wlan0 present" || echo "ut-usb-retry: wlan0 still absent"
+else
+    echo "ut-usb-retry: no /sys/kernel/boot_wlan node"
+fi
 exit 0
