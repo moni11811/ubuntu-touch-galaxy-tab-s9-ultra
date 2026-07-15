@@ -18,7 +18,7 @@ for tree in graphics-kernel display-drivers mm-drivers mmrm-driver securemsm-ker
 done
 
 # SM-X910: import Goodix Berlin touch + Ultra panel cmdline into the kernel tree
-./scripts/prepare-kernel-gts9uwifi.sh "$WORKDIR/downloads/kernel-samsung-gts9wifi"
+bash ./scripts/prepare-kernel-gts9uwifi.sh "$WORKDIR/downloads/kernel-samsung-gts9wifi"
 
 find overlay ramdisk-overlay vendor-ramdisk-overlay -type d -exec chmod o+rx {} +
 find overlay -type f -exec chmod o+r {} +
