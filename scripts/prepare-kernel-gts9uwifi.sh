@@ -55,6 +55,13 @@ CONFIG_TOUCHSCREEN_GOODIX_BRL=m
 # Forced cmdline with the Ultra panel (GTS9U_ANA38407_AMSA46AS02, lcd_id 800004
 # as reported by the SM-X910 bootloader).
 CONFIG_CMDLINE="console=ttynull nokaslr stack_depot_disable=on kasan.stacktrace=off kvm-arm.mode=protected cgroup_disable=pressure video=vfb:640x400,bpp=32,memsize=3072000 printk.devkmsg=on firmware_class.path=/vendor/firmware_mnt/image,/android/vendor/firmware,/android/odm/firmware bootconfig loop.max_part=7 msm_drm.dsi_display0=GTS9U_ANA38407_AMSA46AS02: msm_drm.lcd_id=800004 sec_common_fn.lcd_id=800004 net.ifnames=0"
+# umtprd (UT's MTP daemon) uses POSIX message queues: mq_open failed with
+# ENOSYS on the first boots (kalama-gki leaves it off).
+CONFIG_POSIX_MQUEUE=y
+# UT's usb-moded configurator creates rndis.usb0 for developer-mode USB
+# networking; the kernel only had the Qualcomm gsi rndis (not built).
+CONFIG_USB_CONFIGFS_RNDIS=y
+CONFIG_USB_F_RNDIS=y
 EOF
 
 # 4. dataipa probe header for the kiwi_v2 WLAN profile.
