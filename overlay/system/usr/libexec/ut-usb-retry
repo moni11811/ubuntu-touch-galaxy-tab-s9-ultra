@@ -21,7 +21,13 @@ else
     for mode in mtp_adb developer_mode mtp; do
         echo "ut-usb-retry: trying mode $mode"
         echo "" > "$g"/UDC 2>/dev/null
-        usb-moded-util -s "$mode" 2>&1 | head -2
+        if command -v usb_moded_util >/dev/null 2>&1; then
+            usb_moded_util -s "$mode" 2>&1 | head -2
+        else
+            gdbus call --system --dest com.meego.usb_moded \
+                --object-path /com/meego/usb_moded \
+                --method com.meego.usb_moded.set_mode "$mode" 2>&1 | head -2
+        fi
         sleep 8
         if bound_ok; then
             echo "ut-usb-retry: mode $mode bound"
