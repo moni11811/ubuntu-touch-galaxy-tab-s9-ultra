@@ -71,13 +71,21 @@ process_single_fstab_entry() {
         return
     fi
 
-    if ! mkdir -p "$android_mount_point" && \
-            [[ "$2" =~ ^/mnt ]] && \
-            [ -d /android/mnt ] \
-    ; then
-        mount -t tmpfs android_mnt /android/mnt
-        mount -o rbind /android/mnt /mnt
-        mkdir -p "$android_mount_point"
+    if ! mkdir -p "$android_mount_point" 2>/dev/null; then
+        # /android lives on the (read-only) rootfs; missing mount points such
+        # as /android/efs, /android/prism or /android/optics must be created
+        # with the rootfs temporarily writable, otherwise their partitions
+        # (sec_efs among them, which Samsung HALs need for calibration data)
+        # silently never mount.
+        if [[ "$2" =~ ^/mnt ]] && [ -d /android/mnt ]; then
+            mount -t tmpfs android_mnt /android/mnt
+            mount -o rbind /android/mnt /mnt
+            mkdir -p "$android_mount_point"
+        else
+            mount -o remount,rw /
+            mkdir -p "$android_mount_point"
+            mount -o remount,ro /
+        fi
     fi
 
     label=$(echo $1 | awk -F/ '{print $NF}')
