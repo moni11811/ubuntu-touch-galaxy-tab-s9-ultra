@@ -1,0 +1,12 @@
+[Unit]
+Description=Retry usb-moded gadget setup after boot settles (gts9uwifi)
+After=usb-moded.service multi-user.target
+Wants=usb-moded.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/ut-usb-retry
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

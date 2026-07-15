@@ -1,12 +1,14 @@
 [Unit]
 Description=Boot Qualcomm DSPs (ADSP/CDSP/CVP) for gts9uwifi
-After=lxc-android-config.service
-Wants=lxc-android-config.service
+DefaultDependencies=no
+After=systemd-udev-trigger.service local-fs.target
+Before=lxc-android-config.service
+Wants=systemd-udev-trigger.service
 
 [Service]
 Type=oneshot
 ExecStart=/usr/libexec/ut-dsp-boot
-TimeoutStartSec=240
+TimeoutStartSec=180
 
 [Install]
 WantedBy=multi-user.target

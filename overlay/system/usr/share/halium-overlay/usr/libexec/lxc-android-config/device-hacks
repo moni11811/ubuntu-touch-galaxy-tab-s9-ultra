@@ -21,8 +21,11 @@ for so in "$gst_src"/*.so; do
 done
 chown -R 32011:32011 /home/phablet/.local/lib
 
+# the DTB already forces dr_mode=peripheral; rewriting the mode rebinds the
+# dwc3 UDC and races usb-moded's gadget bind (ENODEV -> charging_only
+# fallback with a dead 18d1:0afe stub), so only write when not peripheral
 for m in /sys/devices/platform/soc/*.ssusb/mode; do
-	[ -w "$m" ] && echo peripheral > "$m"
+	[ -w "$m" ] && [ "$(cat "$m" 2>/dev/null)" != "peripheral" ] && echo peripheral > "$m"
 done
 
 # double tap to wake; the tsp class registers later in boot, and the cmd

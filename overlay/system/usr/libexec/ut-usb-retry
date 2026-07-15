@@ -1,0 +1,22 @@
+#!/bin/sh
+# usb-moded races the dwc3 UDC during early boot (its first mtp bind hits
+# "No such device" and it silently falls back to charging_only, 18d1:0afe,
+# which enumerates as a dead mass-storage stub on the host). Once the system
+# is settled the UDC is stable, so retry the mode selection.
+sleep 12
+g=/sys/kernel/config/usb_gadget/g1
+udc=$(cat "$g"/UDC 2>/dev/null)
+pid=$(cat "$g"/idProduct 2>/dev/null)
+echo "ut-usb-retry: state UDC='$udc' idProduct='$pid'"
+if [ "$pid" = "0x6860" ] && [ -n "$udc" ]; then
+    echo "ut-usb-retry: mtp gadget already up, nothing to do"
+    exit 0
+fi
+# unbind whatever half-configured gadget is there and let usb-moded redo it
+echo "" > "$g"/UDC 2>/dev/null
+systemctl restart usb-moded
+sleep 4
+command -v usb-moded-util >/dev/null && usb-moded-util -s mtp 2>/dev/null
+sleep 3
+echo "ut-usb-retry: after retry UDC='$(cat "$g"/UDC 2>/dev/null)' idProduct='$(cat "$g"/idProduct 2>/dev/null)'"
+exit 0

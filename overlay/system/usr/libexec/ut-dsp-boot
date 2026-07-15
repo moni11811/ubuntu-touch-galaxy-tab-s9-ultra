@@ -1,21 +1,24 @@
 #!/bin/sh
 # Boot the Qualcomm DSPs (ADSP, CDSP, CVP) exactly like the stock vendor
-# init.qti.kernel.rc does at early-boot:
-#   exec_background ... init.qti.write.sh /sys/kernel/boot_adsp/boot 1
-# Those exec_background statements carry SELinux contexts that do not apply
-# in the halium container, and on this device the writes never land: all
-# remoteprocs stay offline, taking audio (ADSP), sensors (SLPI within ADSP)
-# and the DSP-backed HALs down with them. Writing 1 is idempotent.
+# init.qti.kernel.rc does at early-boot. Stock fires these asynchronously
+# BEFORE the HALs and audio machine driver initialize, so this unit runs
+# before lxc-android-config: the audio card registration (machine_dlkm)
+# then finds the ADSP services like on stock. Writing 1 is idempotent.
+# adsp_loader_dlkm/cdsp_loader autoload host-side via DT modalias coldplug,
+# which creates /sys/kernel/boot_adsp and /sys/kernel/boot_cdsp.
 c=0
-while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 120 ]; do sleep 1; c=$((c+1)); done
+while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$((c+1)); done
 [ -w /sys/kernel/boot_adsp/boot ] && echo 1 > /sys/kernel/boot_adsp/boot && echo "ut-dsp-boot: boot_adsp written"
 c=0
-while [ ! -w /sys/kernel/boot_cdsp/boot ] && [ $c -lt 30 ]; do sleep 1; c=$((c+1)); done
+while [ ! -w /sys/kernel/boot_cdsp/boot ] && [ $c -lt 20 ]; do sleep 1; c=$((c+1)); done
 [ -w /sys/kernel/boot_cdsp/boot ] && echo 1 > /sys/kernel/boot_cdsp/boot && echo "ut-dsp-boot: boot_cdsp written"
 [ -w /sys/devices/virtual/cvp/cvp/boot ] && echo 1 > /sys/devices/virtual/cvp/cvp/boot && echo "ut-dsp-boot: cvp boot written"
 
-sleep 12
-for r in /sys/class/remoteproc/remoteproc*; do
-    echo "ut-dsp-boot: $(cat "$r"/name 2>/dev/null) = $(cat "$r"/state 2>/dev/null)"
-done
+# report the outcome without delaying the boot
+(
+    sleep 15
+    for r in /sys/class/remoteproc/remoteproc*; do
+        echo "ut-dsp-boot: $(cat "$r"/name 2>/dev/null) = $(cat "$r"/state 2>/dev/null)"
+    done
+) &
 exit 0
