@@ -1,0 +1,67 @@
+#!/bin/sh
+# Consolidated gts9uwifi hardware bring-up: DSPs, WLAN loader, audio card.
+# Logs to /home/phablet/ut-hw-bringup.log (readable over MTP from the UI).
+LOG=/home/phablet/ut-hw-bringup.log
+exec >>"$LOG" 2>&1
+echo "===== ut-hw-bringup $(date) ====="
+
+adsp_state() {
+    for r in /sys/class/remoteproc/remoteproc*; do
+        case "$(cat "$r"/name 2>/dev/null)" in *adsp*) cat "$r"/state 2>/dev/null; return;; esac
+    done
+}
+
+# --- 1. DSPs: wait for the loader sysfs then trigger, like stock early-boot ---
+c=0; while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$((c+1)); done
+[ -w /sys/kernel/boot_adsp/boot ] && { echo 1 > /sys/kernel/boot_adsp/boot; echo "boot_adsp written"; }
+[ -w /sys/kernel/boot_cdsp/boot ] && { echo 1 > /sys/kernel/boot_cdsp/boot; echo "boot_cdsp written"; }
+[ -w /sys/devices/virtual/cvp/cvp/boot ] && { echo 1 > /sys/devices/virtual/cvp/cvp/boot; echo "cvp written"; }
+
+# wait for the ADSP to actually come up
+c=0; while [ "$(adsp_state)" != "running" ] && [ $c -lt 90 ]; do sleep 2; c=$((c+1)); done
+echo "adsp state = $(adsp_state)"
+for r in /sys/class/remoteproc/remoteproc*; do
+    echo "  $(cat "$r"/name 2>/dev/null) = $(cat "$r"/state 2>/dev/null)"
+done
+
+# --- 2. WLAN: qcacld waits on a write to /dev/wlan (stock: Android WifiHAL) ---
+c=0; while [ ! -e /dev/wlan ] && [ $c -lt 60 ]; do sleep 1; c=$((c+1)); done
+if [ -e /dev/wlan ]; then
+    echo "ON" > /dev/wlan && echo "/dev/wlan <- ON ok" || echo "/dev/wlan write failed"
+    sleep 6
+    ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 present" || {
+        echo "wlan0 absent, trying WAIT_FOR_READY + ENABLE"
+        echo "WAIT_FOR_READY" > /dev/wlan 2>/dev/null
+        echo "ENABLE" > /dev/wlan 2>/dev/null
+        sleep 6
+        ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 present after enable" || echo "wlan0 still absent"
+    }
+else
+    echo "no /dev/wlan node (wlan char dev not created)"
+    ls -la /dev/wl* 2>/dev/null
+fi
+
+# --- 3. Audio: rebind SPF core if no card and the ADSP is up ---
+if grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; then
+    echo "sound card already present"
+elif [ "$(adsp_state)" = "running" ]; then
+    d=/sys/bus/platform/drivers/spf_core_platform
+    [ -d "$d" ] || d=/sys/bus/platform/drivers/spf-core-platform
+    if [ -d "$d" ]; then
+        echo "rebinding spf core"
+        echo soc:spf_core_platform > "$d"/unbind 2>/dev/null
+        sleep 2
+        echo soc:spf_core_platform > "$d"/bind 2>/dev/null
+        sleep 12
+        echo "cards after rebind:"; cat /proc/asound/cards
+    else
+        echo "spf core driver dir not found"; ls /sys/bus/platform/drivers/ | grep -i spf
+    fi
+else
+    echo "adsp not running, cannot rebind audio"
+fi
+
+echo "== final: cards=$(grep -c '^ *[0-9]' /proc/asound/cards 2>/dev/null) wlan0=$(ip link show wlan0 >/dev/null 2>&1 && echo yes || echo no)"
+chown 32011:32011 "$LOG" 2>/dev/null
+sync
+exit 0

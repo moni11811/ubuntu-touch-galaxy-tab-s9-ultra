@@ -1,0 +1,13 @@
+[Unit]
+Description=gts9uwifi consolidated hardware bring-up (DSP/WLAN/audio)
+After=lxc-android-config.service
+Wants=lxc-android-config.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/ut-hw-bringup
+TimeoutStartSec=400
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
