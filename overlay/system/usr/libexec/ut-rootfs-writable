@@ -1,0 +1,13 @@
+#!/bin/sh
+# Ubuntu Touch normally mounts the system root read-only. This static TWRP
+# port intentionally supports local apt package management, so make the ext4
+# root writable and recreate APT's volatile working directories on every boot.
+set -eu
+
+case ",$(findmnt -n -o OPTIONS /)," in
+    *,rw,*) ;;
+    *) mount -o remount,rw / ;;
+esac
+
+install -d -m 0755 /var/lib/apt/lists/partial
+install -d -m 0755 /var/cache/apt/archives/partial

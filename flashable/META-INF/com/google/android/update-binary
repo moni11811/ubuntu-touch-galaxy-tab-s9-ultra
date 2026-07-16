@@ -43,6 +43,7 @@ cleanup_legacy_dev_overrides() {
         ut-diag.service \
         ut-audio-fix.service \
         ut-wlan-diag.service \
+        ut-rootfs-writable.service \
         ut-ssh-enable.service; do
         rm -f "$SYS/$unit"
         rm -f "$SYS/multi-user.target.wants/$unit"
@@ -60,6 +61,7 @@ cleanup_legacy_dev_overrides() {
         ut-diag.service \
         ut-audio-fix.service \
         ut-wlan-diag.service \
+        ut-rootfs-writable.service \
         ut-ssh-enable.service; do
         [ ! -e "$SYS/$unit" ] || return 1
         [ ! -e "$SYS/multi-user.target.wants/$unit" ] || return 1

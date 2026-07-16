@@ -1,4 +1,5 @@
-gts9uwifi integrated bring-up v7
+gts9uwifi integrated bring-up v8
 apps: Morph XDG repair, Click registry, File Manager, Terminal
 hardware: pd-mapper, ADSP/CDSP, WLAN, ALSA/PulseAudio, sensors/rotation
 access: SSH over WiFi with the development public key
+packages: writable rootfs for APT, UT sandbox config, official Fastfetch PPA

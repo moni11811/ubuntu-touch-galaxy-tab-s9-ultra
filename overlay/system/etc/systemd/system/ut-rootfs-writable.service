@@ -1,0 +1,8 @@
+[Unit]
+Description=Make the gts9uwifi root filesystem writable for APT
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/ut-rootfs-writable
+RemainAfterExit=yes

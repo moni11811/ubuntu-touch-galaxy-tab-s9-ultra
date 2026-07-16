@@ -1,0 +1,4 @@
+// Ubuntu Touch deliberately omits _apt because CONFIG_ANDROID_PARANOID_NETWORK
+// prevents that account from using the network. Make the intended fallback
+// explicit so apt does not emit a misleading missing-sandbox-user warning.
+APT::Sandbox::User "root";
