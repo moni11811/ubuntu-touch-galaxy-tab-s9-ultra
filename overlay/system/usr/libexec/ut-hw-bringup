@@ -1,75 +1,78 @@
 #!/bin/sh
-# Consolidated gts9uwifi hardware bring-up: DSPs, WLAN loader, audio card.
-# Logs to /home/phablet/ut-hw-bringup.log (readable over MTP from the UI).
+# Consolidated gts9uwifi hardware bring-up: DSPs, PD-mapper, WLAN, audio, sensors.
+# Log: /home/phablet/ut-hw-bringup.log
+#
+# Root cause solved (validated live 2026-07-16): the audio APM and the sensor
+# SSC run in protection domains on the ADSP. The kernel GPR/SPF and the sensor
+# HAL only learn a PD is up via service-registry notifications from
+# /vendor/bin/pd-mapper. pd-mapper is a container "class core" service that
+# starts at container init, BEFORE this script can boot the ADSP (the ADSP
+# needs firmware_mnt, only mounted by the container). So pd-mapper finds no
+# DSP and dies; audio_pd/sensor_pd never register and audio ("apm is not up")
+# and sensors stay dead. Fix: after the ADSP is up, (re)start pd-mapper and
+# keep it alive, then trigger an ADSP subsystem-restart (SSR) so the audio_pd
+# / sensor_pd images reload WITH pd-mapper present -> "apm is up" and the
+# kalama sound card registers; sensor_pd comes up for the sensor HAL.
 LOG=/home/phablet/ut-hw-bringup.log
 exec >>"$LOG" 2>&1
 echo "===== ut-hw-bringup $(date) ====="
 
+lxc() { lxc-attach -n android -- "$@"; }
 adsp_state() {
     for r in /sys/class/remoteproc/remoteproc*; do
         case "$(cat "$r"/name 2>/dev/null)" in *adsp*) cat "$r"/state 2>/dev/null; return;; esac
     done
 }
+have_card() { grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; }
 
-# --- 1. DSPs: wait for the loader sysfs then trigger, like stock early-boot ---
+# --- 1. Boot the DSPs (stock does this at early-boot) ---
 c=0; while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$((c+1)); done
-[ -w /sys/kernel/boot_adsp/boot ] && { echo 1 > /sys/kernel/boot_adsp/boot; echo "boot_adsp written"; }
-[ -w /sys/kernel/boot_cdsp/boot ] && { echo 1 > /sys/kernel/boot_cdsp/boot; echo "boot_cdsp written"; }
-[ -w /sys/devices/virtual/cvp/cvp/boot ] && { echo 1 > /sys/devices/virtual/cvp/cvp/boot; echo "cvp written"; }
-
-# wait for the ADSP to actually come up
+[ -w /sys/kernel/boot_adsp/boot ] && { echo 1 > /sys/kernel/boot_adsp/boot; echo "boot_adsp"; }
+[ -w /sys/kernel/boot_cdsp/boot ] && { echo 1 > /sys/kernel/boot_cdsp/boot; echo "boot_cdsp"; }
+[ -w /sys/devices/virtual/cvp/cvp/boot ] && echo 1 > /sys/devices/virtual/cvp/cvp/boot
 c=0; while [ "$(adsp_state)" != "running" ] && [ $c -lt 90 ]; do sleep 2; c=$((c+1)); done
-echo "adsp state = $(adsp_state)"
-for r in /sys/class/remoteproc/remoteproc*; do
-    echo "  $(cat "$r"/name 2>/dev/null) = $(cat "$r"/state 2>/dev/null)"
-done
+echo "adsp = $(adsp_state)"
 
-# --- 2a. WLAN: cnss waits for the filesystem-ready signal before powering
-# the chip (stock: init.target.rc writes /sys/kernel/cnss/fs_ready 1) ---
-if [ -w /sys/kernel/cnss/fs_ready ]; then
-    echo 1 > /sys/kernel/cnss/fs_ready && echo "cnss fs_ready written"
-    sleep 8
-else
-    echo "no /sys/kernel/cnss/fs_ready"
-fi
-dmesg | grep -iE "cnss|pci" | grep -viE "Modules not initialized" | tail -12
-
-# --- 2b. WLAN: qcacld waits on a write to /dev/wlan (stock: Android WifiHAL) ---
+# --- 2. WLAN (validated): firmware-ready gate + /dev/wlan load trigger ---
+[ -w /sys/kernel/cnss/fs_ready ] && { echo 1 > /sys/kernel/cnss/fs_ready; echo "cnss fs_ready"; sleep 6; }
 c=0; while [ ! -e /dev/wlan ] && [ $c -lt 60 ]; do sleep 1; c=$((c+1)); done
 if [ -e /dev/wlan ]; then
-    echo "ON" > /dev/wlan && echo "/dev/wlan <- ON ok" || echo "/dev/wlan write failed"
-    sleep 6
-    ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 present" || {
-        echo "wlan0 absent, trying WAIT_FOR_READY + ENABLE"
-        echo "WAIT_FOR_READY" > /dev/wlan 2>/dev/null
-        echo "ENABLE" > /dev/wlan 2>/dev/null
-        sleep 6
-        ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 present after enable" || echo "wlan0 still absent"
-    }
-else
-    echo "no /dev/wlan node (wlan char dev not created)"
-    ls -la /dev/wl* 2>/dev/null
+    echo "ON" > /dev/wlan; sleep 5
+    ip link show wlan0 >/dev/null 2>&1 || { echo "WAIT_FOR_READY" > /dev/wlan 2>/dev/null; echo "ENABLE" > /dev/wlan 2>/dev/null; sleep 4; }
+    ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 up" || echo "wlan0 absent"
 fi
 
-# --- 3. Audio: rebind SPF core if no card and the ADSP is up ---
-if grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; then
-    echo "sound card already present"
-elif [ "$(adsp_state)" = "running" ]; then
-    d=/sys/bus/platform/drivers/spf_core_platform
-    [ -d "$d" ] || d=/sys/bus/platform/drivers/spf-core-platform
-    if [ -d "$d" ]; then
-        echo "rebinding spf core"
-        echo soc:spf_core_platform > "$d"/unbind 2>/dev/null
-        sleep 2
-        echo soc:spf_core_platform > "$d"/bind 2>/dev/null
-        sleep 12
-        echo "cards after rebind:"; cat /proc/asound/cards
-    else
-        echo "spf core driver dir not found"; ls /sys/bus/platform/drivers/ | grep -i spf
+# --- 3. pd-mapper alive + keep-alive, then ADSP SSR so audio_pd/sensor_pd
+# reload with pd-mapper present (validated: yields "apm is up" + sound card) ---
+if [ "$(adsp_state)" = "running" ]; then
+    pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || { lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1 & }
+    # keep-alive: pd-mapper must survive the SSR
+    ( while true; do pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1; sleep 3; done ) >/dev/null 2>&1 &
+    sleep 4
+    echo "pd-mapper: $(pgrep -f /vendor/bin/pd-mapper | head -1)"
+
+    if [ -w /sys/kernel/boot_adsp/ssr ]; then
+        echo "ADSP SSR"
+        echo 1 > /sys/kernel/boot_adsp/ssr
+        # wait for the audio PD to come back and the APM to answer
+        c=0
+        while ! have_card && [ $c -lt 40 ]; do sleep 2; c=$((c+1)); done
     fi
-else
-    echo "adsp not running, cannot rebind audio"
+    echo "cards: $(cat /proc/asound/cards | tr '\n' ' ')"
+    dmesg | grep -iE "apm is|audio_pd.*is up|sensor_pd.*is up" | tail -4
+
+    # --- 4. UT PulseAudio: card exists now; clear the crash-loop and restart ---
+    if have_card; then
+        su - phablet -c 'export XDG_RUNTIME_DIR=/run/user/32011; systemctl --user reset-failed pulseaudio.service 2>/dev/null; systemctl --user restart pulseaudio.service 2>/dev/null' 2>/dev/null
+        sleep 5
+        echo "PA sinks: $(su - phablet -c 'XDG_RUNTIME_DIR=/run/user/32011 pactl list short sinks 2>/dev/null' | wc -l)"
+    fi
 fi
+
+# --- 5. Sensors: restart the HAL now sensor_pd is up so hybris sees sensors ---
+lxc sh -c 'kill $(pidof android.hardware.sensors@2.1-service.multihal) 2>/dev/null; kill $(pidof sensors.qti) 2>/dev/null' 2>/dev/null
+sleep 6
+systemctl restart sensorfwd 2>/dev/null
 
 echo "== final: cards=$(grep -c '^ *[0-9]' /proc/asound/cards 2>/dev/null) wlan0=$(ip link show wlan0 >/dev/null 2>&1 && echo yes || echo no)"
 chown 32011:32011 "$LOG" 2>/dev/null
