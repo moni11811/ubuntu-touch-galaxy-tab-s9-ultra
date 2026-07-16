@@ -26,7 +26,25 @@ adsp_state() {
 have_card() { grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; }
 android_pid() { lxc pidof "$1" 2>/dev/null | awk '{print $1}'; }
 
-# --- 0. Keep pd-mapper alive BEFORE the first ADSP boot. The container has
+# --- 0. Repair the per-user application registry. On the current image,
+# ~/.local can be created as root and the preinstalled Click hooks are not run
+# for phablet. Morph then cannot create its profile, while Lomiri lists Click
+# apps but rejects their AppIDs because ~/.cache/lomiri-app-launch/desktop is
+# empty. Make the XDG data path writable and rebuild the link farm once. This
+# also exposes the already preinstalled Terminal app in Lomiri's launcher.
+if [ -d /home/phablet ]; then
+    install -d -o 32011 -g 32011 -m 0700 /home/phablet/.local /home/phablet/.local/share
+    chown 32011:32011 /home/phablet/.local /home/phablet/.local/share 2>/dev/null
+    if ! find /home/phablet/.cache/lomiri-app-launch/desktop -maxdepth 1 \
+        -name 'filemanager.ubports_filemanager_*.desktop' -print -quit 2>/dev/null | grep -q . || \
+       ! find /home/phablet/.cache/lomiri-app-launch/desktop -maxdepth 1 \
+        -name 'terminal.ubports_terminal_*.desktop' -print -quit 2>/dev/null | grep -q .; then
+        click hook run-user --user=phablet 2>&1 || true
+    fi
+    echo "user apps: local=$(stat -c '%U:%G %a' /home/phablet/.local 2>/dev/null) filemanager=$(find /home/phablet/.cache/lomiri-app-launch/desktop -maxdepth 1 -name 'filemanager.ubports_filemanager_*.desktop' -print -quit 2>/dev/null) terminal=$(find /home/phablet/.cache/lomiri-app-launch/desktop -maxdepth 1 -name 'terminal.ubports_terminal_*.desktop' -print -quit 2>/dev/null)"
+fi
+
+# --- 1. Keep pd-mapper alive BEFORE the first ADSP boot. The container has
 # mounted firmware_mnt by now. Starting it only after ADSP=running makes us
 # depend on a later SSR actually dropping the remoteproc; that is racy when
 # another client holds an rproc reference. With this order the audio/sensor
@@ -38,7 +56,7 @@ done ) >/dev/null 2>&1 &
 sleep 2
 echo "pd-mapper pre-boot: $(pgrep -f /vendor/bin/pd-mapper | head -1)"
 
-# --- 1. Boot the DSPs (stock does this at early-boot) ---
+# --- 2. Boot the DSPs (stock does this at early-boot) ---
 c=0; while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$((c+1)); done
 [ -w /sys/kernel/boot_adsp/boot ] && { echo 1 > /sys/kernel/boot_adsp/boot; echo "boot_adsp"; }
 [ -w /sys/kernel/boot_cdsp/boot ] && { echo 1 > /sys/kernel/boot_cdsp/boot; echo "boot_cdsp"; }
@@ -46,7 +64,7 @@ c=0; while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$
 c=0; while [ "$(adsp_state)" != "running" ] && [ $c -lt 90 ]; do sleep 2; c=$((c+1)); done
 echo "adsp = $(adsp_state)"
 
-# --- 2. WLAN (validated): firmware-ready gate + /dev/wlan load trigger ---
+# --- 3. WLAN (validated): firmware-ready gate + /dev/wlan load trigger ---
 [ -w /sys/kernel/cnss/fs_ready ] && { echo 1 > /sys/kernel/cnss/fs_ready; echo "cnss fs_ready"; sleep 6; }
 c=0; while [ ! -e /dev/wlan ] && [ $c -lt 60 ]; do sleep 1; c=$((c+1)); done
 if [ -e /dev/wlan ]; then
@@ -55,7 +73,7 @@ if [ -e /dev/wlan ]; then
     ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 up" || echo "wlan0 absent"
 fi
 
-# --- 3. pd-mapper alive; prefer the first ADSP load, SSR only as fallback. ---
+# --- 4. pd-mapper alive; prefer the first ADSP load, SSR only as fallback. ---
 if [ "$(adsp_state)" = "running" ]; then
     pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || { lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1 & }
     sleep 4
@@ -74,7 +92,7 @@ if [ "$(adsp_state)" = "running" ]; then
     echo "cards: $(cat /proc/asound/cards | tr '\n' ' ')"
     dmesg | grep -iE "apm is|audio_pd.*is up|sensor_pd.*is up" | tail -4
 
-    # --- 4. Android audio HAL: make the late sound-card status usable. ---
+    # --- 5. Android audio HAL: make the late sound-card status usable. ---
     # msm_common creates these sysfs attributes only when the card registers,
     # after Android ueventd has already settled. They therefore remain 0660
     # root:root instead of root:audio (Android gid 1005). AGM, running as
@@ -113,7 +131,7 @@ if [ "$(adsp_state)" = "running" ]; then
     fi
 fi
 
-# --- 5. Sensors: restart the HAL now sensor_pd is up so hybris sees sensors ---
+# --- 6. Sensors: restart the HAL now sensor_pd is up so hybris sees sensors ---
 lxc sh -c 'kill $(pidof android.hardware.sensors@2.1-service.multihal) 2>/dev/null; kill $(pidof sensors.qti) 2>/dev/null' 2>/dev/null
 sleep 6
 systemctl restart sensorfwd 2>/dev/null
