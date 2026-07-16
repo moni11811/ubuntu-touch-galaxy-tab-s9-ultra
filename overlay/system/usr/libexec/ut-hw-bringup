@@ -24,7 +24,17 @@ for r in /sys/class/remoteproc/remoteproc*; do
     echo "  $(cat "$r"/name 2>/dev/null) = $(cat "$r"/state 2>/dev/null)"
 done
 
-# --- 2. WLAN: qcacld waits on a write to /dev/wlan (stock: Android WifiHAL) ---
+# --- 2a. WLAN: cnss waits for the filesystem-ready signal before powering
+# the chip (stock: init.target.rc writes /sys/kernel/cnss/fs_ready 1) ---
+if [ -w /sys/kernel/cnss/fs_ready ]; then
+    echo 1 > /sys/kernel/cnss/fs_ready && echo "cnss fs_ready written"
+    sleep 8
+else
+    echo "no /sys/kernel/cnss/fs_ready"
+fi
+dmesg | grep -iE "cnss|pci" | grep -viE "Modules not initialized" | tail -12
+
+# --- 2b. WLAN: qcacld waits on a write to /dev/wlan (stock: Android WifiHAL) ---
 c=0; while [ ! -e /dev/wlan ] && [ $c -lt 60 ]; do sleep 1; c=$((c+1)); done
 if [ -e /dev/wlan ]; then
     echo "ON" > /dev/wlan && echo "/dev/wlan <- ON ok" || echo "/dev/wlan write failed"
