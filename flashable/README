@@ -9,10 +9,18 @@ It refuses to run on any device not positively identified as SM-X910
 (ro.product.device gts9u/gts9uwifi AND ro.boot.em.model SM-X910, with a
 bootloader X910* fallback check).
 
-It never writes: recovery, dtbo, userdata, metadata, efs, sec_efs, persist,
+It never writes: recovery, dtbo, metadata, efs, sec_efs, persist,
 modemst1/2, or any bootloader-stage partition (xbl*, abl, aop, tz, hyp,
 devcfg, keymaster, uefisecapp, qupfw, storsec). It never repartitions,
 never wipes, and never reboots by itself.
+
+After all partition writes succeed, an upgrade migration removes only the
+explicitly named gts9uwifi development units and two helper scripts that were
+manually injected into persistent userdata during bring-up. It does not wipe,
+format, or remove user content. This is required because Ubuntu Touch keeps
+`/etc/systemd/system` in userdata and stale units otherwise override the new
+image. On a clean installation the whitelist is absent and the migration is a
+no-op.
 
 The super image is assembled locally with lpmake from the Ubuntu Touch rootfs
 (system) plus the stock SM-X910 dynamic partition images (vendor, odm,

@@ -1,0 +1,4 @@
+gts9uwifi integrated bring-up v7
+apps: Morph XDG repair, Click registry, File Manager, Terminal
+hardware: pd-mapper, ADSP/CDSP, WLAN, ALSA/PulseAudio, sensors/rotation
+access: SSH over WiFi with the development public key

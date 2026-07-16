@@ -16,6 +16,7 @@
 LOG=/home/phablet/ut-hw-bringup.log
 exec >>"$LOG" 2>&1
 echo "===== ut-hw-bringup $(date) ====="
+echo "integrated image script: apps + pd-mapper + DSP + WLAN + audio + sensors"
 
 lxc() { lxc-attach -n android -- "$@"; }
 adsp_state() {
@@ -135,6 +136,7 @@ fi
 lxc sh -c 'kill $(pidof android.hardware.sensors@2.1-service.multihal) 2>/dev/null; kill $(pidof sensors.qti) 2>/dev/null' 2>/dev/null
 sleep 6
 systemctl restart sensorfwd 2>/dev/null
+echo "sensors: hal=$(lxc pidof android.hardware.sensors@2.1-service.multihal 2>/dev/null) sensorfwd=$(systemctl is-active sensorfwd 2>/dev/null)"
 
 echo "== final: cards=$(grep -c '^ *[0-9]' /proc/asound/cards 2>/dev/null) wlan0=$(ip link show wlan0 >/dev/null 2>&1 && echo yes || echo no)"
 chown 32011:32011 "$LOG" 2>/dev/null

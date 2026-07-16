@@ -1,0 +1,14 @@
+#!/bin/sh
+# Prepare a reproducible SSH endpoint for WiFi-only development. The private
+# key never enters the image; only its public half is installed for phablet.
+set -e
+
+ssh-keygen -A >/dev/null 2>&1
+install -d -m 0755 /run/sshd
+install -d -o 32011 -g 32011 -m 0700 /home/phablet/.ssh
+KEY=/usr/share/gts9uwifi/authorized_keys
+AUTH=/home/phablet/.ssh/authorized_keys
+touch "$AUTH"
+grep -qxF "$(cat "$KEY")" "$AUTH" 2>/dev/null || cat "$KEY" >> "$AUTH"
+chown 32011:32011 "$AUTH"
+chmod 0600 "$AUTH"

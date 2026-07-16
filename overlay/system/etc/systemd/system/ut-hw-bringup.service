@@ -1,7 +1,7 @@
 [Unit]
-Description=gts9uwifi consolidated hardware bring-up (DSP/WLAN/audio)
+Description=gts9uwifi integrated bring-up (apps/DSP/WLAN/audio/sensors)
 After=lxc-android-config.service
-Wants=lxc-android-config.service
+Wants=lxc-android-config.service ut-ssh-enable.service
 
 [Service]
 Type=oneshot

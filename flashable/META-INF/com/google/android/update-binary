@@ -1,8 +1,11 @@
 #!/sbin/sh
 # Ubuntu Touch installer for Samsung Galaxy Tab S9 Ultra Wi-Fi (SM-X910, gts9uwifi) ONLY.
-# Writes exactly: boot, init_boot, vendor_boot, vbmeta, super. Nothing else.
-# Never touches: recovery, dtbo, userdata, metadata, efs/sec_efs/persist/modemst*,
+# Writes exactly these partitions: boot, init_boot, vendor_boot, vbmeta, super.
+# Never touches: recovery, dtbo, metadata, efs/sec_efs/persist/modemst*,
 # xbl*/abl/aop/tz/hyp/devcfg/keymaster/uefisecapp/qupfw/storsec, PIT or GPT.
+# It never wipes or formats userdata. After a successful flash it removes only
+# the explicitly named development units/scripts previously injected into
+# userdata, so the integrated image versions are used on the next boot.
 # No wipes, no formats, no reboot.
 
 OUTFD=$2
@@ -17,6 +20,53 @@ abort() {
     ui_print "ERROR: $1"
     ui_print "Installation aborted."
     exit 1
+}
+
+cleanup_legacy_dev_overrides() {
+    # /etc and /home are persistent UT userdata. Old debug units there take
+    # precedence over a new system image and would invalidate an upgrade test.
+    # Keep this whitelist exact: no recursive or wildcard deletion is allowed.
+    SYS=/data/system-data/etc/systemd/system
+    PHABLET_HOME=/data/user-data/phablet
+
+    mount /data >/dev/null 2>&1 || true
+    if [ ! -d "$SYS" ]; then
+        ui_print "No persistent UT systemd tree found; no legacy cleanup needed."
+        return 0
+    fi
+
+    ui_print "Removing obsolete injected development services..."
+    for unit in \
+        ut-hw-bringup.service \
+        ut-dsp-boot.service \
+        ut-usb-retry.service \
+        ut-diag.service \
+        ut-audio-fix.service \
+        ut-wlan-diag.service \
+        ut-ssh-enable.service; do
+        rm -f "$SYS/$unit"
+        rm -f "$SYS/multi-user.target.wants/$unit"
+    done
+
+    # The image service now executes /usr/libexec directly. Removing these
+    # two old launch scripts proves the next boot is not using the live patch.
+    rm -f "$PHABLET_HOME/ut-hw-bringup.sh"
+    rm -f "$PHABLET_HOME/ut-ssh-up.sh"
+
+    for unit in \
+        ut-hw-bringup.service \
+        ut-dsp-boot.service \
+        ut-usb-retry.service \
+        ut-diag.service \
+        ut-audio-fix.service \
+        ut-wlan-diag.service \
+        ut-ssh-enable.service; do
+        [ ! -e "$SYS/$unit" ] || return 1
+        [ ! -e "$SYS/multi-user.target.wants/$unit" ] || return 1
+    done
+    [ ! -e "$PHABLET_HOME/ut-hw-bringup.sh" ] || return 1
+    [ ! -e "$PHABLET_HOME/ut-ssh-up.sh" ] || return 1
+    return 0
 }
 
 ui_print "---------------------------------------"
@@ -101,6 +151,8 @@ unzip -p "$ZIPFILE" vbmeta.img | dd of="$BB/vbmeta$SLOT" bs=4M 2>/dev/null || ui
 
 ui_print "Writing super (several minutes)..."
 unzip -p "$ZIPFILE" super.img.zst | "$ZSTD" -d --long=27 -c | dd of="$BB/super" bs=16M || abort "failed to write super"
+
+cleanup_legacy_dev_overrides || abort "Images flashed, but legacy development overrides could not be removed"
 
 sync
 
