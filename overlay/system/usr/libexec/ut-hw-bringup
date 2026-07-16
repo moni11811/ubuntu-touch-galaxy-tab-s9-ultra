@@ -24,6 +24,19 @@ adsp_state() {
     done
 }
 have_card() { grep -q '^ *[0-9]' /proc/asound/cards 2>/dev/null; }
+android_pid() { lxc pidof "$1" 2>/dev/null | awk '{print $1}'; }
+
+# --- 0. Keep pd-mapper alive BEFORE the first ADSP boot. The container has
+# mounted firmware_mnt by now. Starting it only after ADSP=running makes us
+# depend on a later SSR actually dropping the remoteproc; that is racy when
+# another client holds an rproc reference. With this order the audio/sensor
+# PD service-registry notifications are present on the first firmware load. ---
+( while true; do
+    pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1
+    sleep 3
+done ) >/dev/null 2>&1 &
+sleep 2
+echo "pd-mapper pre-boot: $(pgrep -f /vendor/bin/pd-mapper | head -1)"
 
 # --- 1. Boot the DSPs (stock does this at early-boot) ---
 c=0; while [ ! -w /sys/kernel/boot_adsp/boot ] && [ $c -lt 90 ]; do sleep 1; c=$((c+1)); done
@@ -42,17 +55,17 @@ if [ -e /dev/wlan ]; then
     ip link show wlan0 >/dev/null 2>&1 && echo "wlan0 up" || echo "wlan0 absent"
 fi
 
-# --- 3. pd-mapper alive + keep-alive, then ADSP SSR so audio_pd/sensor_pd
-# reload with pd-mapper present (validated: yields "apm is up" + sound card) ---
+# --- 3. pd-mapper alive; prefer the first ADSP load, SSR only as fallback. ---
 if [ "$(adsp_state)" = "running" ]; then
     pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || { lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1 & }
-    # keep-alive: pd-mapper must survive the SSR
-    ( while true; do pgrep -f /vendor/bin/pd-mapper >/dev/null 2>&1 || lxc /vendor/bin/pd-mapper >/tmp/pdmapper.log 2>&1; sleep 3; done ) >/dev/null 2>&1 &
     sleep 4
     echo "pd-mapper: $(pgrep -f /vendor/bin/pd-mapper | head -1)"
 
-    if [ -w /sys/kernel/boot_adsp/ssr ]; then
-        echo "ADSP SSR"
+    # Give audio_pd from the initial boot a chance to publish APM first.
+    c=0
+    while ! have_card && [ $c -lt 20 ]; do sleep 2; c=$((c+1)); done
+    if ! have_card && [ -w /sys/kernel/boot_adsp/ssr ]; then
+        echo "ADSP SSR fallback"
         echo 1 > /sys/kernel/boot_adsp/ssr
         # wait for the audio PD to come back and the APM to answer
         c=0
@@ -61,8 +74,39 @@ if [ "$(adsp_state)" = "running" ]; then
     echo "cards: $(cat /proc/asound/cards | tr '\n' ' ')"
     dmesg | grep -iE "apm is|audio_pd.*is up|sensor_pd.*is up" | tail -4
 
-    # --- 4. UT PulseAudio: card exists now; clear the crash-loop and restart ---
+    # --- 4. Android audio HAL: make the late sound-card status usable. ---
+    # msm_common creates these sysfs attributes only when the card registers,
+    # after Android ueventd has already settled. They therefore remain 0660
+    # root:root instead of root:audio (Android gid 1005). AGM, running as
+    # audioserver:audio, cannot read card_state, times out, forces
+    # vendor.audio.use.primary.default=true and makes audio.primary reject the
+    # card. audio.hidl_compat then dereferences the failed open and crashes PA.
+    # Fix ownership, respawn the HAL so AGM retries from scratch, and clear the
+    # fallback property before loading the droid card.
     if have_card; then
+        for n in /sys/kernel/snd_card/card_state /sys/kernel/aud_dev/state; do
+            c=0; while [ ! -e "$n" ] && [ $c -lt 30 ]; do sleep 1; c=$((c+1)); done
+            if [ -e "$n" ]; then
+                chown 0:1005 "$n" 2>/dev/null
+                chmod 0660 "$n" 2>/dev/null
+                echo "audio sysfs: $(ls -ln "$n" 2>/dev/null)"
+            fi
+        done
+
+        setprop vendor.audio.use.primary.default false 2>/dev/null
+        old_audio_pid=$(android_pid android.hardware.audio.service_64)
+        [ -n "$old_audio_pid" ] && lxc kill -9 "$old_audio_pid" 2>/dev/null
+        c=0; new_audio_pid=''
+        while [ $c -lt 30 ]; do
+            new_audio_pid=$(android_pid android.hardware.audio.service_64)
+            [ -n "$new_audio_pid" ] && [ "$new_audio_pid" != "$old_audio_pid" ] && break
+            sleep 1; c=$((c+1))
+        done
+        sleep 5
+        setprop vendor.audio.use.primary.default false 2>/dev/null
+        echo "audio HAL: $old_audio_pid -> $new_audio_pid; primary.default=$(getprop vendor.audio.use.primary.default)"
+
+        # UT PulseAudio: the HAL is now usable; clear the crash-loop and restart.
         su - phablet -c 'export XDG_RUNTIME_DIR=/run/user/32011; systemctl --user reset-failed pulseaudio.service 2>/dev/null; systemctl --user restart pulseaudio.service 2>/dev/null' 2>/dev/null
         sleep 5
         echo "PA sinks: $(su - phablet -c 'XDG_RUNTIME_DIR=/run/user/32011 pactl list short sinks 2>/dev/null' | wc -l)"
