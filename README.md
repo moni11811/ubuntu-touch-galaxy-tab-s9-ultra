@@ -1,6 +1,6 @@
 # Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
 
-Halium 13 device configuration for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
+Ubuntu Touch 24.04 port for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
 (**SM-X910**, codename `gts9uwifi`, Snapdragon 8 Gen 2 / SM8550 "kalama").
 
 This is a fork of [Azkali's `samsung-gts9`](https://gitlab.com/azkali-samsung/gts9/ubports/samsung-gts9),
@@ -116,7 +116,7 @@ the TWRP-installable ZIP.
 
 ## Installing
 
-Unlocked bootloader and TWRP, same as the reference port. The ZIP writes
+Unlocked bootloader and TWRP, same as the reference port. Format data and flash the ZIP you previously built or got from [releases](https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra/releases). The ZIP writes
 **only** `boot`, `init_boot`, `vendor_boot`, `vbmeta` and `super`. It never
 touches `recovery`, `dtbo`, `efs`, `persist`, the bootloader or the PIT. After
 the writes it removes a known list of development units and injected scripts
