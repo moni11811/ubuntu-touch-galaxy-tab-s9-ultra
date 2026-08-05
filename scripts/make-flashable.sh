@@ -15,6 +15,12 @@ cp -r "$HERE/flashable/META-INF" "$STAGE/"
 printf 'dummy\n' > "$STAGE/META-INF/com/google/android/updater-script"
 cp "$OUT/boot.img" "$OUT/init_boot.img" "$OUT/vendor_boot.img" "$STAGE/"
 cp "$OUT/vbmeta.img" "$STAGE/" 2>/dev/null || cp "$HERE/vbmeta.img" "$STAGE/"
+
+# Stock SM-X910 dt_table. Halium needs the Samsung board overlays, so the
+# package restores them instead of assuming whatever is on the device.
+cp "$HERE/vendorboot/dtbo" "$STAGE/dtbo.img"
+head -c4 "$STAGE/dtbo.img" | od -An -tx1 | tr -d ' \n' | grep -qi '^d7b7ab1e' \
+    || { echo "vendorboot/dtbo is not a dt_table image"; exit 1; }
 [ -f "$ZSTD_STATIC" ] && cp "$ZSTD_STATIC" "$STAGE/zstd"
 
 zstd -T0 "-$ZSTD_LEVEL" --long=27 -f "$OUT/super.img" -o "$STAGE/super.img.zst"

@@ -122,11 +122,22 @@ built yourself or downloaded from
 Coming from Android you have to format data first in TWRP, which **erases
 everything on the tablet**; updating an existing Ubuntu Touch install does not.
 
-The ZIP itself writes **only** `boot`, `init_boot`, `vendor_boot`, `vbmeta` and
-`super`. It never touches `recovery`, `dtbo`, `efs`, `persist`, the bootloader
-or the PIT. After the writes it removes a known list of development units and
-injected scripts from userdata; it does not format userdata or delete user
-content on its own.
+**Only the Wi-Fi SM-X910 is supported**, and it is the only model this has been
+tested on. The 5G SM-X916 is not covered: the installer reads `ro.boot.em.model`
+from the Samsung bootloader and refuses to run on anything that is not an X910,
+before writing a single byte.
+
+The ZIP writes **only** `boot`, `init_boot`, `vendor_boot`, `vbmeta`, `dtbo` and
+`super`. It never touches `recovery`, `efs`, `persist`, the bootloader or the
+PIT. After the writes it removes a known list of development units and injected
+scripts from userdata; it does not format userdata or delete user content on its
+own.
+
+`dtbo` gets the **stock SM-X910 table** restored. Halium boots the Samsung
+Android kernel and needs the Samsung board overlays, so if a mainline port was
+installed before — the Ubuntu desktop one, for instance — that partition is
+left empty or noop and the tablet hangs on the Samsung splash. Restoring it
+makes the package self-sufficient whatever was installed previously.
 
 Restoring stock is a normal Odin flash of the official firmware.
 

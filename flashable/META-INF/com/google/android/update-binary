@@ -1,7 +1,10 @@
 #!/sbin/sh
 # Ubuntu Touch installer for Samsung Galaxy Tab S9 Ultra Wi-Fi (SM-X910, gts9uwifi) ONLY.
-# Writes exactly these partitions: boot, init_boot, vendor_boot, vbmeta, super.
-# Never touches: recovery, dtbo, metadata, efs/sec_efs/persist/modemst*,
+# Writes exactly these partitions: boot, init_boot, vendor_boot, vbmeta, dtbo,
+# super. dtbo gets the stock SM-X910 table back, because Halium needs the
+# Samsung board overlays and a previously installed mainline port leaves that
+# partition empty.
+# Never touches: recovery, metadata, efs/sec_efs/persist/modemst*,
 # xbl*/abl/aop/tz/hyp/devcfg/keymaster/uefisecapp/qupfw/storsec, PIT or GPT.
 # It never wipes or formats userdata. After a successful flash it removes only
 # the explicitly named development units/scripts previously injected into
@@ -104,7 +107,7 @@ fi
 
 # --- Partition presence and size checks ---
 BB=/dev/block/by-name
-for part in boot init_boot vendor_boot vbmeta super; do
+for part in boot init_boot vendor_boot vbmeta dtbo super; do
     [ -e "$BB/$part" ] || abort "Missing partition $BB/$part"
 done
 
@@ -113,11 +116,13 @@ blkdev_size() { blockdev --getsize64 "$1" 2>/dev/null || echo 0; }
 BOOT_SIZE=$(blkdev_size "$BB/boot")
 INIT_BOOT_SIZE=$(blkdev_size "$BB/init_boot")
 VENDOR_BOOT_SIZE=$(blkdev_size "$BB/vendor_boot")
+DTBO_SIZE=$(blkdev_size "$BB/dtbo")
 SUPER_SIZE=$(blkdev_size "$BB/super")
 
 [ "$BOOT_SIZE" -ge 100663296 ] || abort "boot partition too small ($BOOT_SIZE < 100663296)"
 [ "$INIT_BOOT_SIZE" -ge 8388608 ] || abort "init_boot partition too small ($INIT_BOOT_SIZE)"
 [ "$VENDOR_BOOT_SIZE" -ge 100663296 ] || abort "vendor_boot partition too small ($VENDOR_BOOT_SIZE)"
+[ "$DTBO_SIZE" -eq 16777216 ] || abort "dtbo size mismatch ($DTBO_SIZE != 16777216, not SM-X910 layout)"
 [ "$SUPER_SIZE" -eq 11744051200 ] || abort "super size mismatch ($SUPER_SIZE != 11744051200, not SM-X910 layout)"
 
 # --- Tooling ---
@@ -128,9 +133,15 @@ fi
 ZSTD=$(command -v zstd || echo /tmp/zstd)
 [ -x "$ZSTD" ] || abort "no zstd available"
 
-for f in boot.img init_boot.img vendor_boot.img vbmeta.img super.img.zst; do
+for f in boot.img init_boot.img vendor_boot.img vbmeta.img dtbo.img super.img.zst; do
     unzip -l "$ZIPFILE" "$f" >/dev/null 2>&1 || abort "ZIP is missing $f"
 done
+
+# The dtbo we ship is the stock SM-X910 table, trimmed to its dt_table size.
+# Refuse to write anything that is not a real dt_table: an empty or foreign
+# dtbo is exactly the failure this write exists to repair.
+unzip -p "$ZIPFILE" dtbo.img | dd bs=4 count=1 2>/dev/null | od -An -tx1 \
+    | tr -d ' \n' | grep -qi '^d7b7ab1e' || abort "dtbo.img is not a dt_table image"
 
 SLOT="$(getprop ro.boot.slot_suffix)"
 
@@ -139,6 +150,7 @@ ui_print "  boot.img        -> $BB/boot$SLOT"
 ui_print "  init_boot.img   -> $BB/init_boot$SLOT"
 ui_print "  vendor_boot.img -> $BB/vendor_boot$SLOT"
 ui_print "  vbmeta.img      -> $BB/vbmeta$SLOT"
+ui_print "  dtbo.img        -> $BB/dtbo$SLOT (stock SM-X910 table)"
 ui_print "  super.img.zst   -> $BB/super (decompressed)"
 ui_print "No other partition will be written."
 
@@ -150,6 +162,14 @@ ui_print "Flashing vendor_boot..."
 unzip -p "$ZIPFILE" vendor_boot.img | dd of="$BB/vendor_boot$SLOT" bs=4M || abort "failed to flash vendor_boot"
 ui_print "Flashing vbmeta..."
 unzip -p "$ZIPFILE" vbmeta.img | dd of="$BB/vbmeta$SLOT" bs=4M 2>/dev/null || ui_print "vbmeta flash skipped"
+
+# Halium boots the Samsung Android kernel, which needs the stock board
+# overlays. A mainline port (the Ubuntu desktop one, for instance) leaves an
+# empty or noop dtbo behind, and the tablet then hangs on the Samsung splash.
+# Restoring the stock table makes this package self-sufficient whatever ROM
+# was installed before.
+ui_print "Restoring stock dtbo..."
+unzip -p "$ZIPFILE" dtbo.img | dd of="$BB/dtbo$SLOT" bs=4M || abort "failed to flash dtbo"
 
 ui_print "Writing super (several minutes)..."
 unzip -p "$ZIPFILE" super.img.zst | "$ZSTD" -d --long=27 -c | dd of="$BB/super" bs=16M || abort "failed to write super"
