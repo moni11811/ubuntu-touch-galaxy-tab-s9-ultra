@@ -1,4 +1,4 @@
-# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
+﻿# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
 
 Ubuntu Touch 24.04 port for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
 (**SM-X910**, codename `gts9uwifi`, Snapdragon 8 Gen 2 / SM8550 "kalama").
@@ -37,7 +37,8 @@ re-validated from a clean flash.
 | **Storage** | ✅ | Installs to the device's own UFS dynamic partitions (`super`) |
 | **Package management** | ✅ | `apt` works after the writable-rootfs fix; PPAs installable |
 | **Core applications** | ✅ | Morph browser, File manager and Terminal launch and survive reboots |
-| **ADSP / CDSP** | ✅ | Both reach `running`; `pd-mapper` published before the first ADSP boot |
+| **Waydroid** | ✅ | Android applications run without issues |
+| **Audio/sensor DSPs** | ✅ | Prerequisite for audio and sensors; both reach `running` |
 | **SSH over Wi-Fi** | ✅ | Development access, opt-in and shipped without any key — see below |
 | **USB gadget** | 🟡 | Enumerates as `18d1:6860` but the host does not mount the MTP volume |
 | **Bluetooth** | ❌ | `bluebinder` starts, the chip does not respond |
@@ -55,7 +56,6 @@ re-validated from a clean flash.
 | **Keyboard cover** | ❔ | Samsung EF-DX920 pogo keyboard not tested |
 | **Hardware video decode** | ❔ | `msm_video.ko` kept stock, as the reference port does; not tested here |
 | **Speaker protection** | ❔ | Cirrus protection DSP not tested |
-| **Waydroid** | ❔ | Not validated |
 | **Modem** | — | Not applicable to the Wi-Fi-only model |
 
 ✅ tested on the physical tablet · 🟡 partially working · ❌ known not to work
@@ -103,7 +103,7 @@ they are proprietary and are not distributed here. The X710 firmware used by
 the reference port **must not** be used.
 
 ```bash
-git clone -b halium-13-gts9uwifi <this-repo> samsung-gts9u
+git clone <this-repo> samsung-gts9u
 cd samsung-gts9u
 scripts/import-stock-partitions.sh /path/to/lpunpack-output-of-stock-super
 ./build.sh
@@ -116,11 +116,17 @@ the TWRP-installable ZIP.
 
 ## Installing
 
-Unlocked bootloader and TWRP, same as the reference port. Format data and flash the ZIP you previously built or got from [releases](https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra/releases). The ZIP writes
-**only** `boot`, `init_boot`, `vendor_boot`, `vbmeta` and `super`. It never
-touches `recovery`, `dtbo`, `efs`, `persist`, the bootloader or the PIT. After
-the writes it removes a known list of development units and injected scripts
-from userdata; it does not format userdata or delete user content.
+Unlocked bootloader and TWRP, same as the reference port. Flash the ZIP you
+built yourself or downloaded from
+[releases](https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra/releases).
+Coming from Android you have to format data first in TWRP, which **erases
+everything on the tablet**; updating an existing Ubuntu Touch install does not.
+
+The ZIP itself writes **only** `boot`, `init_boot`, `vendor_boot`, `vbmeta` and
+`super`. It never touches `recovery`, `dtbo`, `efs`, `persist`, the bootloader
+or the PIT. After the writes it removes a known list of development units and
+injected scripts from userdata; it does not format userdata or delete user
+content on its own.
 
 Restoring stock is a normal Odin flash of the official firmware.
 
