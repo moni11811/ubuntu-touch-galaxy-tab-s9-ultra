@@ -132,11 +132,18 @@ Restoring stock is a normal Odin flash of the official firmware.
 
 ## Development SSH
 
-`ut-ssh-enable.service` is shipped but **not enabled**, and **no key is
-bundled**. To use it, drop your own public key at
-`overlay/system/usr/share/gts9uwifi/authorized_keys` before building — the
-path is gitignored so it cannot be committed by accident — then enable the
-unit on the device.
+`ut-ssh-enable.service` ships **disabled**, and **no key is bundled**. Enable
+it on the device only when you need it:
+
+```bash
+sudo systemctl enable --now ut-ssh-enable
+```
+
+To have your own key installed automatically, drop its public half at
+`overlay/system/usr/share/gts9uwifi/authorized_keys` before building — the path
+is gitignored so it cannot be committed by accident. Without a key sshd falls
+back to password authentication, which on Ubuntu Touch means the screen unlock
+passphrase, so do not leave the service enabled on a network you do not trust.
 
 ## Credits
 

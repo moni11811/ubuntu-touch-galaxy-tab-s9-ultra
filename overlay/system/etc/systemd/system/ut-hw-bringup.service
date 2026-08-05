@@ -1,7 +1,7 @@
 [Unit]
 Description=gts9uwifi integrated bring-up (apps/DSP/WLAN/audio/sensors)
 After=lxc-android-config.service ut-rootfs-writable.service
-Wants=lxc-android-config.service ut-rootfs-writable.service ut-ssh-enable.service
+Wants=lxc-android-config.service ut-rootfs-writable.service
 
 [Service]
 Type=oneshot
