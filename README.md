@@ -24,19 +24,46 @@ clean flash is **v7**; **v8** adds writable package management, was verified in
 the running system and passed static validation, but has not yet been
 re-validated from a clean flash.
 
-| Component | State |
-|---|---|
-| Boot, display, GPU, touch, Lomiri | Working |
-| Wi-Fi | Working |
-| Speakers, microphone (PulseAudio) | Working |
-| Motion sensors, auto-rotation | Working |
-| Battery and charging | Working — the reported percentage is occasionally wrong on some boots |
-| Morph browser, File manager, Terminal | Working |
-| APT / installing packages | Working |
-| SSH over Wi-Fi (development) | Working, opt-in — see below |
-| USB gadget / MTP | Partial — enumerates as `18d1:6860` but the host does not mount it |
-| Bluetooth | Not working — `bluebinder` starts, the chip does not respond |
-| Cameras, S Pen, fingerprint | Not attempted |
+| Component | Status | Notes |
+|---|---|---|
+| **Display** | ✅ | Native panel selected by the stock `msm_drm.dsi_display0` cmdline |
+| **Shell** | ✅ | Lomiri on Mir, tablet form factor |
+| **GPU** | ✅ | Adreno 740 through the Android graphics stack (libhybris) |
+| **Touchscreen** | ✅ | Goodix Berlin / GT9916, driver imported for the Ultra |
+| **Wi-Fi** | ✅ | `kiwi_v2` / qcacld-3.0; needs the `cnss/fs_ready` write |
+| **Speakers / microphones** | ✅ | Four speakers and microphone capture through PulseAudio; validated with real playback and recording |
+| **Motion sensors** | ✅ | Accelerometer, gyroscope and autorotation, via the ADSP `sensor_pd` |
+| **Battery and charging** | ✅ | Telemetry and charging work; the reported percentage is occasionally wrong on some boots |
+| **Storage** | ✅ | Installs to the device's own UFS dynamic partitions (`super`) |
+| **Package management** | ✅ | `apt` works after the writable-rootfs fix; PPAs installable |
+| **Core applications** | ✅ | Morph browser, File manager and Terminal launch and survive reboots |
+| **ADSP / CDSP** | ✅ | Both reach `running`; `pd-mapper` published before the first ADSP boot |
+| **SSH over Wi-Fi** | ✅ | Development access, opt-in and shipped without any key — see below |
+| **USB gadget** | 🟡 | Enumerates as `18d1:6860` but the host does not mount the MTP volume |
+| **Bluetooth** | ❌ | `bluebinder` starts, the chip does not respond |
+| **USB host** | ❌ | `dwc3` is deliberately forced to `peripheral`; host mode would need the charger fix the reference port carries |
+| **S Pen** | ❌ | Not integrated |
+| **Fingerprint / haptics** | ❌ | Not brought up |
+| **Flash / cameras** | ❌ | Not started |
+| **Backlight / blanking** | ❔ | Not validated |
+| **Buttons** | ❔ | Power and volume not explicitly validated |
+| **Suspend / resume** | ❔ | Not validated |
+| **USB-C DisplayPort** | ❔ | Not validated |
+| **Ethernet / UAS** | ❔ | RTL8153 not tested |
+| **Book cover** | ❔ | Hall switch not tested |
+| **Ambient light** | ❔ | STK31610 not tested |
+| **Keyboard cover** | ❔ | Samsung EF-DX920 pogo keyboard not tested |
+| **Hardware video decode** | ❔ | `msm_video.ko` kept stock, as the reference port does; not tested here |
+| **Speaker protection** | ❔ | Cirrus protection DSP not tested |
+| **Waydroid** | ❔ | Not validated |
+| **Modem** | — | Not applicable to the Wi-Fi-only model |
+
+✅ tested on the physical tablet · 🟡 partially working · ❌ known not to work
+or not integrated · ❔ not tested yet · — not applicable
+
+Every ✅ entry was tested on the physical tablet. A driver merely binding is
+not considered proof that a subsystem works, and nothing is marked ✅ because
+it works on another operating system on the same hardware.
 
 ## What this branch adds on top of the reference port
 
