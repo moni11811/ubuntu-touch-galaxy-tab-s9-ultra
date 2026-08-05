@@ -8,3 +8,7 @@ out
 tmp
 STATUS.md
 ubuntu-touch-kalama-firmware-v.tar.xz
+
+# Never commit a developer SSH key into the image: ut-ssh-prepare picks this
+# file up at build time if you drop your own public key here.
+overlay/system/usr/share/gts9uwifi/authorized_keys
