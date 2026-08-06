@@ -1,6 +1,6 @@
-﻿# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
+# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
 
-<img width="1618" height="911" alt="image" src="https://github.com/user-attachments/assets/d6871b5c-386d-4746-a36d-3d4e5ab2dee2" />
+<img width="1618" height="911" alt="Ubuntu Touch running on the Galaxy Tab S9 Ultra" src="https://github.com/user-attachments/assets/d6871b5c-386d-4746-a36d-3d4e5ab2dee2" />
 
 Ubuntu Touch 24.04 port for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
 (**SM-X910**, codename `gts9uwifi`, Snapdragon 8 Gen 2 / SM8550 "kalama").
@@ -102,7 +102,7 @@ they are proprietary and are not distributed here. The X710 firmware used by
 the reference port **must not** be used.
 
 ```bash
-git clone <this-repo> samsung-gts9u
+git clone https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra.git samsung-gts9u
 cd samsung-gts9u
 scripts/import-stock-partitions.sh /path/to/lpunpack-output-of-stock-super
 ./build.sh
@@ -115,12 +115,21 @@ the TWRP-installable ZIP.
 
 ## Installing
 
-First, keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as I don't have a 5G model to test out.
-It requires unlocked bootloader and TWRP, flash the ZIP you
-built yourself or downloaded from
-[here](https://xdaforums.com/attachments/ubuntu-touch-24-04-gts9uwifi-20260806-zip.6370912/).
-If you are coming from Android you'll have to format data first in TWRP, which **erases
-everything on the tablet**.
+First, keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as
+I don't have a 5G model to test on.
+
+It requires an unlocked bootloader and TWRP. Flash the ZIP you built yourself,
+or download it from the
+[XDA thread](https://xdaforums.com/t/rom-ubuntu-touch-ubuntu-touch-for-tab-s9.4794523/)
+([direct link](https://xdaforums.com/attachments/ubuntu-touch-24-04-gts9uwifi-20260806-zip.6370912/)):
+
+```
+SHA-256  a848dc4d8e46b68c77090d568d271348bccae849bd687761c3ce93d15a409bc1
+```
+
+If you are coming from Android you'll have to format data first in TWRP, which
+**erases everything on the tablet**. Updating an existing Ubuntu Touch install
+does not need it.
 
 Restoring stock is a normal Odin flash of the official firmware.
 
