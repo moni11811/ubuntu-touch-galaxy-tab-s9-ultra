@@ -115,12 +115,12 @@ the TWRP-installable ZIP.
 
 ## Installing
 
-Keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as I don't have a 5G model to test out.
-Unlocked bootloader and TWRP, same as the reference port. Flash the ZIP you
+First, keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as I don't have a 5G model to test out.
+It requires unlocked bootloader and TWRP, flash the ZIP you
 built yourself or downloaded from
-[releases](https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra/releases).
-Coming from Android you have to format data first in TWRP, which **erases
-everything on the tablet**; updating an existing Ubuntu Touch install does not.
+[here](https://xdaforums.com/attachments/ubuntu-touch-24-04-gts9uwifi-20260806-zip.6370912/).
+If you are coming from Android you'll have to format data first in TWRP, which **erases
+everything on the tablet**.
 
 Restoring stock is a normal Odin flash of the official firmware.
 
