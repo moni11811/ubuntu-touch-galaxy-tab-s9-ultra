@@ -19,10 +19,8 @@ kernel fork is needed.
 
 ## Status
 
-Ubuntu Touch boots and is usable as a tablet. The last build validated after a
-clean flash is **v7**; **v8** adds writable package management, was verified in
-the running system and passed static validation, but has not yet been
-re-validated from a clean flash.
+Ubuntu Touch boots and is usable as a tablet. The table below reflects the
+current build, flashed from the ZIP on the physical tablet.
 
 | Component | Status | Notes |
 |---|---|---|
@@ -30,11 +28,16 @@ re-validated from a clean flash.
 | **Shell** | ✅ | Lomiri on Mir, tablet form factor |
 | **GPU** | ✅ | Adreno 740 through the Android graphics stack (libhybris) |
 | **Touchscreen** | ✅ | Goodix Berlin / GT9916, driver imported for the Ultra |
+| **Backlight** | ✅ | Screen brightness control |
+| **Buttons** | ✅ | Power and volume |
+| **Keyboard cover** | ✅ | Samsung EF-DX920 pogo keyboard |
 | **Wi-Fi** | ✅ | `kiwi_v2` / qcacld-3.0; needs the `cnss/fs_ready` write |
 | **Speakers / microphones** | ✅ | Four speakers and microphone capture through PulseAudio; validated with real playback and recording |
+| **Vibration** | ✅ | Haptic feedback |
 | **Motion sensors** | ✅ | Accelerometer, gyroscope and autorotation, via the ADSP `sensor_pd` |
 | **Battery and charging** | ✅ | Telemetry and charging work; the reported percentage is occasionally wrong on some boots |
-| **Storage** | ✅ | Installs to the device's own UFS dynamic partitions (`super`) |
+| **Suspend / resume** | ✅ | |
+| **Storage** | ✅ | Installs to the device's own UFS dynamic partitions (`super`); microSD works |
 | **Package management** | ✅ | `apt` works after the writable-rootfs fix; PPAs installable |
 | **Core applications** | ✅ | Morph browser, File manager and Terminal launch and survive reboots |
 | **Waydroid** | ✅ | Android applications run without issues |
@@ -43,16 +46,12 @@ re-validated from a clean flash.
 | **USB gadget** | 🟡 | Enumerates as `18d1:6860` but the host does not mount the MTP volume |
 | **Bluetooth** | ❌ | `bluebinder` starts, the chip does not respond |
 | **USB host** | ❌ | `dwc3` is deliberately forced to `peripheral`; host mode would need the charger fix the reference port carries |
+| **USB-C DisplayPort** | ❌ | No output over USB-C |
+| **Book cover** | ❌ | Closing the cover does not blank or suspend the tablet |
 | **S Pen** | ❌ | Not integrated |
-| **Fingerprint / haptics** | ❌ | Not brought up |
+| **Fingerprint** | ❌ | Not brought up |
 | **Flash / cameras** | ❌ | Not started |
-| **Backlight / blanking** | ❔ | Not validated |
-| **Buttons** | ❔ | Power and volume not explicitly validated |
-| **Suspend / resume** | ❔ | Not validated |
-| **USB-C DisplayPort** | ❔ | Not validated |
-| **Book cover** | ❔ | Hall switch not tested |
 | **Ambient light** | ❔ | STK31610 not tested |
-| **Keyboard cover** | ❔ | Samsung EF-DX920 pogo keyboard not tested |
 | **Speaker protection** | ❔ | Cirrus protection DSP not tested |
 | **Modem** | — | Not applicable to the Wi-Fi-only model |
 
