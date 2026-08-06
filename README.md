@@ -50,11 +50,9 @@ re-validated from a clean flash.
 | **Buttons** | ❔ | Power and volume not explicitly validated |
 | **Suspend / resume** | ❔ | Not validated |
 | **USB-C DisplayPort** | ❔ | Not validated |
-| **Ethernet / UAS** | ❔ | RTL8153 not tested |
 | **Book cover** | ❔ | Hall switch not tested |
 | **Ambient light** | ❔ | STK31610 not tested |
 | **Keyboard cover** | ❔ | Samsung EF-DX920 pogo keyboard not tested |
-| **Hardware video decode** | ❔ | `msm_video.ko` kept stock, as the reference port does; not tested here |
 | **Speaker protection** | ❔ | Cirrus protection DSP not tested |
 | **Modem** | — | Not applicable to the Wi-Fi-only model |
 
@@ -116,28 +114,12 @@ the TWRP-installable ZIP.
 
 ## Installing
 
+Keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as I don't have a 5G model to test out.
 Unlocked bootloader and TWRP, same as the reference port. Flash the ZIP you
 built yourself or downloaded from
 [releases](https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra/releases).
 Coming from Android you have to format data first in TWRP, which **erases
 everything on the tablet**; updating an existing Ubuntu Touch install does not.
-
-**Only the Wi-Fi SM-X910 is supported**, and it is the only model this has been
-tested on. The 5G SM-X916 is not covered: the installer reads `ro.boot.em.model`
-from the Samsung bootloader and refuses to run on anything that is not an X910,
-before writing a single byte.
-
-The ZIP writes **only** `boot`, `init_boot`, `vendor_boot`, `vbmeta`, `dtbo` and
-`super`. It never touches `recovery`, `efs`, `persist`, the bootloader or the
-PIT. After the writes it removes a known list of development units and injected
-scripts from userdata; it does not format userdata or delete user content on its
-own.
-
-`dtbo` gets the **stock SM-X910 table** restored. Halium boots the Samsung
-Android kernel and needs the Samsung board overlays, so if a mainline port was
-installed before — the Ubuntu desktop one, for instance — that partition is
-left empty or noop and the tablet hangs on the Samsung splash. Restoring it
-makes the package self-sufficient whatever was installed previously.
 
 Restoring stock is a normal Odin flash of the official firmware.
 
