@@ -120,7 +120,7 @@ I don't have a 5G model to test on.
 
 It requires an unlocked bootloader and TWRP. Flash the ZIP you built yourself,
 or download it from the
-[XDA thread](https://xdaforums.com/t/rom-ubuntu-touch-ubuntu-touch-for-tab-s9.4794523/)
+[XDA thread](https://xdaforums.com/t/rom-ubuntu-touch-ubuntu-touch-for-tab-s9.4794523/page-2#post-90686061/)
 ([direct link](https://xdaforums.com/attachments/ubuntu-touch-24-04-gts9uwifi-20260806-zip.6370912/)):
 
 ```
