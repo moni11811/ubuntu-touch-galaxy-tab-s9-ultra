@@ -1,5 +1,7 @@
 ﻿# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
 
+<img width="1618" height="911" alt="image" src="https://github.com/user-attachments/assets/d6871b5c-386d-4746-a36d-3d4e5ab2dee2" />
+
 Ubuntu Touch 24.04 port for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
 (**SM-X910**, codename `gts9uwifi`, Snapdragon 8 Gen 2 / SM8550 "kalama").
 
