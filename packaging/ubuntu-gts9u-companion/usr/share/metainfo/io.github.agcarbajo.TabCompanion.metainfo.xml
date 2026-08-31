@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.agcarbajo.TabCompanion</id>
+  <name>Tab Companion</name>
+  <summary>Configure the S Pen and cover keyboard</summary>
+  <summary xml:lang="es">Configura el S Pen y la funda con teclado</summary>
+  <summary xml:lang="fr">Configurer le S Pen et le clavier de couverture</summary>
+  <summary xml:lang="de">S Pen und Tastatur-Cover einrichten</summary>
+  <summary xml:lang="it">Configura la S Pen e la cover con tastiera</summary>
+  <summary xml:lang="pt">Configurar a S Pen e a capa com teclado</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Configure S Pen actions and the special keys of Samsung's cover keyboard from a lightweight native GNOME application.</p>
+  </description>
+  <developer id="io.github.agcarbajo"><name>Ubuntu gts9uwifi port contributors</name></developer>
+  <content_rating type="oars-1.1"/>
+  <launchable type="desktop-id">io.github.agcarbajo.TabCompanion.desktop</launchable>
+  <url type="homepage">https://github.com/agcarbajo/ubuntu-galaxy-tab-s9-ultra</url>
+  <releases>
+    <release version="0.10.8" date="2026-08-13">
+      <description><p>Disables S Pen remote controls while Bluetooth is off and restores the saved preference immediately when it returns.</p></description>
+    </release>
+    <release version="0.10.7" date="2026-08-13">
+      <description><p>Clarifies that the vibration test reproduces the selected keyboard strength.</p></description>
+    </release>
+    <release version="0.10.6" date="2026-08-13">
+      <description><p>Makes the vibration test reproduce the selected on-screen keyboard strength.</p></description>
+    </release>
+    <release version="0.10.5" date="2026-08-13">
+      <description><p>Places S Pen remote controls after behaviour settings and removes the oversized vibration illustration.</p></description>
+    </release>
+    <release version="0.10.4" date="2026-08-13">
+      <description><p>Recovers stale docked S Pen bonds promptly after reboot and hardens pairing-service startup.</p></description>
+    </release>
+    <release version="0.10.3" date="2026-08-13">
+      <description><p>Maps the S Pen side button to a held left click in pointer mode for clicking and dragging.</p></description>
+    </release>
+    <release version="0.10.2" date="2026-08-13">
+      <description><p>Corrects both pointer axes, balances horizontal travel, strengthens keyboard haptics and credits PenMouse S.</p></description>
+    </release>
+    <release version="0.10.1" date="2026-08-13">
+      <description><p>Detects and automatically repairs unresponsive S Pen GATT links without showing cached battery values.</p></description>
+    </release>
+    <release version="0.10.0" date="2026-08-13">
+      <description><p>Fixes continuous S Pen pointer motion, strengthens keyboard haptics and adds notification vibration.</p></description>
+    </release>
+    <release version="0.9.1" date="2026-08-13">
+      <description><p>Fixes automatic S Pen re-pairing when BlueZ recreates the device during the dock pairing window.</p></description>
+    </release>
+    <release version="0.9.0" date="2026-08-13">
+      <description><p>Adds S Pen remote control modes, air pointer, keyboard haptics and live dock orientation refresh.</p></description>
+    </release>
+    <release version="0.8.1" date="2026-08-13">
+      <description><p>Apply the useful keyboard behaviour through Keep the default action instead of storing it as a custom mapping.</p></description>
+    </release>
+    <release version="0.8.0" date="2026-08-13">
+      <description><p>Add graphical key simulation, useful special-key defaults, S Pen hover rejection and docked digitizer control, flashlight actions, and automatic stale-bond recovery.</p></description>
+    </release>
+    <release version="0.7.0" date="2026-08-13">
+      <description><p>Redesign keyboard discovery and action selection, add application and command pickers, improve S Pen status and add translations.</p></description>
+    </release>
+    <release version="0.6.0" date="2026-08-13">
+      <description><p>Pair the docked S Pen automatically, report its BLE battery level and map all six physical air gestures.</p></description>
+    </release>
+    <release version="0.5.0" date="2026-08-12">
+      <description><p>Fix touch-scrolled action selection and map the measured EF-DX920 special keys.</p></description>
+    </release>
+    <release version="0.4.0" date="2026-08-12">
+      <description><p>Handle single, double and long S Pen button presses without BLE.</p></description>
+    </release>
+    <release version="0.3.0" date="2026-08-12">
+      <description><p>Add cover-key learning and the uinput action engine.</p></description>
+    </release>
+    <release version="0.2.0" date="2026-08-12">
+      <description><p>Show the measured S Pen dock, orientation and charging state through the hardware service.</p></description>
+    </release>
+    <release version="0.1.0" date="2026-08-12"/>
+  </releases>
+</component>

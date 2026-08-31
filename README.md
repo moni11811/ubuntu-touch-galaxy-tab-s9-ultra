@@ -1,166 +1,153 @@
-# Ubuntu Touch 24.04 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
+# Ubuntu 24.04 LTS for Samsung Galaxy Tab S9 Ultra Wi-Fi
 
-<img width="1618" height="911" alt="Ubuntu Touch running on the Galaxy Tab S9 Ultra" src="https://github.com/user-attachments/assets/d6871b5c-386d-4746-a36d-3d4e5ab2dee2" />
+<img width="2319" height="1306" alt="20260805_041759" src="https://github.com/user-attachments/assets/1d8ddb29-a499-430c-b1b8-078672399d81" />
 
-Ubuntu Touch 24.04 port for the **Samsung Galaxy Tab S9 Ultra Wi-Fi**
-(**SM-X910**, codename `gts9uwifi`, Snapdragon 8 Gen 2 / SM8550 "kalama").
+Ubuntu 24.04 LTS arm64 for the Samsung Galaxy Tab S9 Ultra Wi-Fi
+(`SM-X910`, `gts9uwifi`), running GNOME 46 on Wayland and upstream Linux
+7.2-rc3.
 
-This is a fork of [Azkali's `samsung-gts9`](https://gitlab.com/azkali-samsung/gts9/ubports/samsung-gts9),
-the Ubuntu Touch port for the Tab S9 11" (SM-X710, `gts9wifi`). The Halium 13
-adaptation, the kernel tree, the vendor module set and the whole build pipeline
-are his work; this branch only carries the delta needed to make the Ultra boot
-and to bring its hardware up. **If you own the Tab S9 11", use his repository,
-not this one.**
+## Hardware compatibility
 
-The kernel is shared with the reference port —
-[`kernel-samsung-gts9wifi`](https://gitlab.com/azkali-samsung/gts9/ubports/kernel-samsung-gts9wifi),
-branch `android13-5.15-halium`. The SM-X910 differences (Goodix Berlin touch
-controller, Ultra panel cmdline, `kiwi_v2` WLAN, a `dataipa` probe header) are
-applied on top at build time by `scripts/prepare-kernel-gts9uwifi.sh`, so no
-kernel fork is needed.
+| Component | Status | Summary |
+|---|---:|---|
+| Display | ✅ | Native 2960×1848 at 120 Hz |
+| Desktop | ✅ | GNOME 46, Wayland and GDM |
+| GPU | ✅ | Adreno 740 with Freedreno/Turnip |
+| Touchscreen | ✅ | Goodix multitouch |
+| S Pen writing | ✅ | Hover, pressure, tilt, side button and palm rejection |
+| S Pen dock | ✅ | Insertion, orientation and charging |
+| S Pen BLE | ✅ | Pairing, real battery levels, air gestures and pointer mode fully validated |
+| Tab Companion | ✅ | S Pen remote modes, behaviour options, haptics and keyboard remapping |
+| Keyboard cover | ✅ | Only EF-DX920 tested, not sure if other models will work |
+| Cover switch | ✅ | Closing the cover turns off the display |
+| Power and volume buttons | ✅ | Including suspend from the power button |
+| Wi-Fi | ✅ | WCN7850 / ath12k |
+| Bluetooth | ✅ | Controller, audio and S Pen BLE |
+| Speakers and microphones | ✅ | Four speakers and digital microphones |
+| Vibration / haptics | ✅ | On-screen keyboard feedback |
+| Motion sensors | ✅ | Rotation, accelerometer, gyroscope and compass |
+| Battery telemetry | ✅ | Charge, voltage, current and temperature |
+| USB-PD/PPS charging | ✅ | Up to 25 W measured into the battery |
+| Suspend / resume | ✅ | Deep suspend |
+| microSD | ✅ | Read and write storage works normally |
+| USB host | ✅ | HID and storage, powered or unpowered |
+| USB-C DisplayPort | ✅ | External video output |
+| Cameras and flash | ✅ | Four cameras, autofocus and flashlight work; colour tuning remains a future improvement |
+| Ambient light sensor | ❌ | Currently not working |
+| Fingerprint reader | 🟡 | Optical UI, touch exclusion and secure EL721 initialisation validated; enrolment, verification and GNOME integration remain pending |
+| Waydroid | ❓ | Not tested |
 
-## Status
+✅ working on the physical tablet · 🟡 experimental or partially validated ·
+❌ unavailable · ❓ not tested
 
-Ubuntu Touch boots and is usable as a tablet. The table below reflects the
-current build, flashed from the ZIP on the physical tablet.
+The evidence and technical limitations for every component are documented in
+[hardware-status.md](docs/hardware-status.md).
 
-| Component | Status | Notes |
-|---|---|---|
-| **Display** | ✅ | Native panel selected by the stock `msm_drm.dsi_display0` cmdline |
-| **Shell** | ✅ | Lomiri on Mir, tablet form factor |
-| **GPU** | ✅ | Adreno 740 through the Android graphics stack (libhybris) |
-| **Touchscreen** | ✅ | Goodix Berlin / GT9916, driver imported for the Ultra |
-| **Backlight** | ✅ | Screen brightness control |
-| **Buttons** | ✅ | Power and volume |
-| **Keyboard cover** | ✅ | Samsung EF-DX920 pogo keyboard |
-| **Wi-Fi** | ✅ | `kiwi_v2` / qcacld-3.0; needs the `cnss/fs_ready` write |
-| **Speakers / microphones** | ✅ | Four speakers and microphone capture through PulseAudio; validated with real playback and recording |
-| **Vibration** | ✅ | Haptic feedback |
-| **Motion sensors** | ✅ | Accelerometer, gyroscope and autorotation, via the ADSP `sensor_pd` |
-| **Battery and charging** | ✅ | Telemetry and charging work; the reported percentage is occasionally wrong on some boots |
-| **Suspend / resume** | ✅ | |
-| **Storage** | ✅ | Installs to the device's own UFS dynamic partitions (`super`); microSD works |
-| **Package management** | ✅ | `apt` works after the writable-rootfs fix; PPAs installable |
-| **Core applications** | ✅ | Morph browser, File manager and Terminal launch and survive reboots |
-| **Waydroid** | ✅ | Android applications run without issues |
-| **Audio/sensor DSPs** | ✅ | Prerequisite for audio and sensors; both reach `running` |
-| **SSH over Wi-Fi** | ✅ | Development access, opt-in and shipped without any key — see below |
-| **USB gadget** | 🟡 | Enumerates as `18d1:6860` but the host does not mount the MTP volume |
-| **Bluetooth** | ❌ | `bluebinder` starts, the chip does not respond |
-| **USB host** | ❌ | `dwc3` is deliberately forced to `peripheral`; host mode would need the charger fix the reference port carries |
-| **USB-C DisplayPort** | ❌ | No output over USB-C |
-| **Book cover** | ❌ | Closing the cover does not blank or suspend the tablet |
-| **S Pen** | ❌ | Not integrated |
-| **Fingerprint** | ❌ | Not brought up |
-| **Flash / cameras** | ❌ | Not started |
-| **Ambient light** | ❔ | STK31610 not tested |
-| **Speaker protection** | ❔ | Cirrus protection DSP not tested |
-| **Modem** | — | Not applicable to the Wi-Fi-only model |
+## Tab Companion
+<img width="2164" height="1764" alt="Screenshot from 2026-08-20 04-02-55" src="https://github.com/user-attachments/assets/df7cddca-46e8-438a-bcb8-be713cc93bed" />
 
-✅ tested on the physical tablet · 🟡 partially working · ❌ known not to work
-or not integrated · ❔ not tested yet · — not applicable
+Tab Companion 1.0.0 is preinstalled and provides:
 
-Every ✅ entry was tested on the physical tablet. A driver merely binding is
-not considered proof that a subsystem works, and nothing is marked ✅ because
-it works on another operating system on the same hardware.
+- full S Pen settings (pairing, gestures and air-pointer mouse mode);
+- remapping for compatible Samsung Book Cover Keyboard keys;
+- adjustable vibration feedback for GNOME's on-screen keyboard and optional notification vibration;
+- dual boot to Android, with an optional toggle in quick settings.
 
-## What this branch adds on top of the reference port
+The air-pointer concept is inspired by
+[PenMouse S](https://github.com/jojczak/PenMouseS) by Jakub J (`@jojczak`).
+Tab Companion uses an independent native Linux implementation.
 
-The Ultra needs more than a different device tree; without the Android
-framework several bring-up steps that stock `init` performs never happen. The
-commits in this branch are, in order of how much they mattered:
+## Installation
 
-- **Wi-Fi.** `/sys/kernel/cnss/fs_ready` must be written before the `/dev/wlan`
-  trigger, mirroring `init.target.rc`.
-- **Audio and sensors.** Both live in ADSP *protection domains* and only come
-  up once `/vendor/bin/pd-mapper` publishes them to the service registry. That
-  daemon has to be alive **before the first ADSP boot** but after the container
-  mounts `firmware_mnt`; SSR is kept only as a fallback. PulseAudio then
-  crashed in `audio.hidl_compat` because `audio.primary.kalama` refused to
-  open: `/sys/kernel/snd_card/card_state` and `/sys/kernel/aud_dev/state`
-  appear late as `0660 root:root` while AGM runs as gid 1005, so it exhausted
-  its retries and forced the primary-default fallback. Fixing the ownership
-  and letting the HAL start makes speakers and microphone work.
-- **DSPs.** `/sys/kernel/boot_{a,c}dsp/boot` is written by `ut-hw-bringup`
-  after the container is up, because doing it earlier breaks PIL.
-- **Click applications.** Lomiri rejected every Click app as `Invalid app ID`
-  because `~/.cache/lomiri-app-launch/desktop` was missing entirely;
-  `click hook run-user` rebuilds it.
-- **Writable rootfs for APT.** `apt update` failed on a read-only root before
-  reaching any mirror. The root is remounted `rw` and APT's volatile
-  directories are recreated each boot.
-- **USB.** The stock DTB ships `dr_mode="otg"`; the port needs `peripheral`,
-  patched with `fdtput` as the reference port does.
-- **Partitions.** `mount-android-partitions` could not create mount points on a
-  read-only root, which left `vendor_dlkm` and `sec_efs` unmounted.
+Both ways use the same installation ZIP. The only difference is whether you
+split the UFS first.
 
-## Building
+> [!WARNING]
+> Either way, **everything Android keeps in `userdata` is erased**: its apps,
+> its settings and its files. Android's system itself is not touched. Back up
+> anything you want to keep first. On another note, the project seems really stable so far, but as always: I'm not responsible for bricked devices, missing recovery partitions, nuclear wars or you getting fired because you forgot to boot back into android for the alarm.
 
-Requires a Linux host (WSL2 works) and the stock **SM-X910 X910XXS5CYG1**
-firmware. The dynamic partition images come from your own firmware download —
-they are proprietary and are not distributed here. The X710 firmware used by
-the reference port **must not** be used.
+### Before you start
 
-```bash
-git clone https://github.com/agcarbajo/ubuntu-touch-galaxy-tab-s9-ultra.git samsung-gts9u
-cd samsung-gts9u
-scripts/import-stock-partitions.sh /path/to/lpunpack-output-of-stock-super
-./build.sh
+1. **An unlocked bootloader.**
+2. **Root with Magisk** (only if you want dual boot).
+3. Get `ubuntu-24.04-sm-x910-vX.X.X.zip` from the [latest release](https://github.com/agcarbajo/ubuntu-galaxy-tab-s9-ultra/releases/latest). `gts9u-split.zip` and `Dualboot-vX.X.X.apk` only if you want dual boot.
+4. **[TWRP](https://github.com/rainbowdashh/android_device_samsung_gts9u/releases/tag/V2)** and **a `vbmeta` with AVB verification disabled** ([the one published alongside TWRP](https://xdaforums.com/attachments/vbmeta-1-tar.6077784/)). Flash both files in the AP slot using Odin or Heimdall (you will need to reboot again to download mode between flashes).
+5. After flashing both files from step 4 reboot to TWRP. **Don't let One UI boot** or TWRP will be overwritten with the stock recovery and you will need to flash the files again.
+
+### Ubuntu on the whole tablet
+
+1. From TWRP just flash the installation ZIP (`ubuntu-24.04-sm-x910-v1.0.0.zip`) using a microSD, external USB storage or sideload. **Don't flash it from internal storage** as it will get wiped.
+2. Reboot and enjoy!
+
+### Ubuntu beside Android
+
+> [!IMPORTANT]
+> The default split is 50% of the storage for Android and 50% for Linux. If you want to modify it just change the value of `ANDROID-PERCENT` inside `gts9u-split.zip` to the percentage you want Android to keep (between 5% and 95%).
+
+1. Flash `gts9u-split.zip`. It shortens `userdata`, creates `linuxroot`
+   beside it, and recreates Android's data so Android can make fresh encryption
+   keys on its next boot.
+2. Reboot to TWRP (Reboot > Recovery).
+3. Wipe > Format Data.
+4. Flash the installation ZIP (`ubuntu-24.04-sm-x910-v1.0.0.zip`).
+5. Reboot and enjoy! (see below for how to reboot to Android).
+
+### Switching systems
+
+From **Ubuntu**, just use the toggle that you should see on quick settings or from the Tab Companion app under the Dualboot tab.
+
+From **Android**, install the `Dualboot-vX.X.X.apk` app and give it root access, then reboot from the app or add the toggle to quick settings.
+
+Both One UI and LineageOS have been tested in dual boot with Ubuntu and they work fine.
+
+Liked the project? you might want to [buy me a coffee](https://paypal.me/agcarbajo1), I'll be very grateful!
+
+## Known issues
+
+- Regarding the official cover keyboard, as I said, only EF-DX920 cover keyboard has been tested. EF-DX900, EF-DX910, EF-DX915 and
+EF-DX925 are untested as I don't have them, so they might not work.
+- Text might not display correctly in some Chromium-based apps.
+- Front cameras are zoomed in for some reason.
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [Boot strategy](docs/boot-strategy.md) | Requirements, partitions, the boot chain and recovery |
+| [Dual boot](docs/dual-boot.md) | How switching systems works, and what it never touches |
+| [Hardware status](docs/hardware-status.md) | Evidence, limitations and pending hardware tests |
+| [Tab Companion](docs/tab-companion.md) | S Pen and keyboard behaviour, architecture and diagnostics |
+| [Ubuntu userspace](docs/ubuntu-userspace.md) | Root filesystem and desktop integration |
+| [Fingerprint reader](docs/fingerprint-reader.md) | EL721/UDFPS architecture, security model and validation plan |
+| [Development notes](docs/development-notes.md) | Durable technical conclusions and rejected approaches |
+| [Porting log](docs/porting-log.md) | Chronological engineering history |
+
+## Repository layout
+
+```text
+kernel/       Device tree, drivers, patches and kernel configuration
+packaging/    Debian packages installed in the Ubuntu image
+android/      The Dualboot app, which switches systems from the Android side
+configs/      System configuration, service overlays and the TWRP installers
+scripts/      Reproducible build and validation tools
+docs/         Detailed documentation and engineering history
+artifacts/    Generated release files; not versioned
+work/         Scratch space for builds; not versioned
 ```
 
-`build.sh` clones the build tools, the kernel and the ten Qualcomm vendor
-module trees on first run, applies the SM-X910 kernel preparation, builds the
-Ubuntu Touch rootfs and produces `out/`. `scripts/make-flashable.sh` packages
-the TWRP-installable ZIP.
+## Firmware and licensing
 
-## Installing
+Keep in mind project has been made with the help of agentic AIs (codex and claude code), so some things might not be done in the best possible way.
 
-First, keep in mind that currently **only the Wi-Fi SM-X910 is supported**, as
-I don't have a 5G model to test on.
+Proprietary Samsung and Qualcomm firmware is not stored in Git. Build helpers
+stage it from the owner's tablet or official Samsung firmware and verify pinned
+checksums.
 
-It requires an unlocked bootloader and TWRP. Flash the ZIP you built yourself,
-or download it from the
-[XDA post](https://xdaforums.com/posts/90686061/)
-([direct link](https://xdaforums.com/attachments/ubuntu-touch-24-04-gts9uwifi-20260806-zip.6370912/)):
+The project default license is MIT; per-file SPDX headers take precedence.
+Kernel code and patches remain GPL-2.0-only, and the device tree remains
+BSD-3-Clause. Imported sources are listed in
+[kernel/PROVENANCE.md](kernel/PROVENANCE.md).
 
-```
-SHA-256  a848dc4d8e46b68c77090d568d271348bccae849bd687761c3ce93d15a409bc1
-```
-
-If you are coming from Android you'll have to format data first in TWRP, which
-**erases everything on the tablet**. Updating an existing Ubuntu Touch install
-does not need it.
-
-Restoring stock is a normal Odin flash of the official firmware.
-
-## Development SSH
-
-`ut-ssh-enable.service` ships **disabled**, and **no key is bundled**. Enable
-it on the device only when you need it:
-
-```bash
-sudo systemctl enable --now ut-ssh-enable
-```
-
-To have your own key installed automatically, drop its public half at
-`overlay/system/usr/share/gts9uwifi/authorized_keys` before building — the path
-is gitignored so it cannot be committed by accident. Without a key sshd falls
-back to password authentication, which on Ubuntu Touch means the screen unlock
-passphrase, so do not leave the service enabled on a network you do not trust.
-
-## Credits
-
-- **[Azkali](https://gitlab.com/Azkali)** — the Tab S9 port this one is derived
-  from, and the Halium 13 work that makes it possible.
-- **[Halium](https://halium.org)** and **[UBports](https://ubports.com)** —
-  the platform.
-
-## Licensing
-
-This repository is a fork of an upstream that carries no license file;
-inherited files keep whatever terms upstream applies to them, and the changes
-in this branch are offered on the same basis. The overlay also redistributes
-Samsung and Qualcomm binaries — panel calibration data, Goodix touch firmware
-and a gralloc shim — solely for device enablement; they are proprietary and
-are not covered by any license granted here. Stock dynamic partition images
-are never committed and must be extracted from your own firmware download.
+Contributions must be reproducible in the repository and validated on physical
+hardware before a component is marked as working.
